@@ -26,6 +26,9 @@ else:
 
 # Load Google Drive image mapping if available
 GOOGLE_DRIVE_IMAGE_MAP = {}
+# Cache for file IDs fetched via API (path -> file_id)
+GOOGLE_DRIVE_FILE_ID_CACHE = {}
+
 if USE_GOOGLE_DRIVE and GOOGLE_DRIVE_IMAGES_FILE.exists():
     try:
         import json
@@ -126,16 +129,25 @@ def get_google_drive_images():
     if GOOGLE_DRIVE_IMAGE_MAP:
         image_files = []
         for path, info in GOOGLE_DRIVE_IMAGE_MAP.items():
+            file_id = info.get('file_id')
+            # Cache file_id for later use
+            if file_id:
+                GOOGLE_DRIVE_FILE_ID_CACHE[path] = file_id
             image_files.append({
                 'path': path,
                 'name': info.get('name', Path(path).name),
-                'file_id': info.get('file_id'),
+                'file_id': file_id,
                 'full_path': path
             })
         return sorted(image_files, key=lambda x: x['name'])
     
     # If no mapping file, try to generate it on the fly (slower)
-    return get_google_drive_images_api()
+    images = get_google_drive_images_api()
+    # Cache file_ids from API response
+    for img in images:
+        if img.get('file_id'):
+            GOOGLE_DRIVE_FILE_ID_CACHE[img['path']] = img['file_id']
+    return images
 
 def get_google_drive_images_api():
     """Fetch image list from Google Drive API (requires API key)"""
@@ -182,6 +194,34 @@ def get_google_drive_images_api():
     except Exception as e:
         print(f"Google Drive API error: {e}")
         return []
+
+def get_file_id_from_api(image_path):
+    """Fetch file ID for a specific image path from Google Drive API"""
+    try:
+        from googleapiclient.discovery import build
+        
+        API_KEY = os.environ.get('GOOGLE_DRIVE_API_KEY', '')
+        if not API_KEY:
+            return None
+        
+        service = build('drive', 'v3', developerKey=API_KEY)
+        
+        # Extract filename from path
+        filename = Path(image_path).name
+        
+        # Search for file by name in the folder
+        query = f"name='{filename}' and '{GOOGLE_DRIVE_FOLDER_ID}' in parents and trashed=false"
+        results = service.files().list(q=query, fields="files(id, name)").execute()
+        items = results.get('files', [])
+        
+        if items:
+            # Return first match (or could match by full path if needed)
+            return items[0]['id']
+        
+        return None
+    except Exception as e:
+        print(f"Error fetching file ID from API: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -240,17 +280,28 @@ def serve_google_drive_image(image_path):
     try:
         import requests
         
-        # Look up file ID from mapping
+        # Look up file ID from multiple sources
         file_id = None
-        if image_path in GOOGLE_DRIVE_IMAGE_MAP:
+        
+        # 1. Check cache (populated from API or mapping file)
+        if image_path in GOOGLE_DRIVE_FILE_ID_CACHE:
+            file_id = GOOGLE_DRIVE_FILE_ID_CACHE[image_path]
+        # 2. Check mapping file
+        elif image_path in GOOGLE_DRIVE_IMAGE_MAP:
             file_id = GOOGLE_DRIVE_IMAGE_MAP[image_path].get('file_id')
+            if file_id:
+                GOOGLE_DRIVE_FILE_ID_CACHE[image_path] = file_id
+        # 3. Direct file ID provided
         elif image_path.startswith('id:'):
-            # Direct file ID provided
             file_id = image_path[3:]
+        # 4. Try to fetch from API on demand (slower)
+        else:
+            file_id = get_file_id_from_api(image_path)
+            if file_id:
+                GOOGLE_DRIVE_FILE_ID_CACHE[image_path] = file_id
         
         if not file_id:
-            # Try to extract from path or return error
-            return f"Image not found in mapping: {image_path}. Run google_drive_setup.py to generate mapping.", 404
+            return f"Image not found: {image_path}. File ID not available.", 404
         
         # Use direct download link for public files
         # Format: https://drive.google.com/uc?export=download&id=FILE_ID
