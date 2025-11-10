@@ -1,0 +1,29 @@
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups (optional - remove this line if you want to track backups in git)
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
