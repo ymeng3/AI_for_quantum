@@ -149,14 +149,38 @@ Follow these steps to deploy your RHEED labeling tool to Render.
 3. **Set up image storage**: Choose one of the options in Step 5
 4. **Monitor usage**: Check Render dashboard for usage stats
 
-## Cost
+## Cost - Free Options
 
-- **Free tier**: 
-  - Web service spins down after 15 min inactivity (slow first request)
-  - PostgreSQL: 90 days free, then $7/month
-- **Paid tier**: 
-  - Always-on service: ~$7/month
-  - Better performance
+### Render Free Tier (What we're using)
+- **Web Service**: ✅ **FREE** (spins down after 15 min inactivity - first request may be slow)
+- **PostgreSQL**: ✅ **FREE for 90 days**, then $7/month
+- **Total**: $0 for first 90 days, then $7/month for database only
+
+### Completely Free Alternatives
+
+**Option 1: Railway (Recommended for 100% Free)**
+- ✅ $5/month free credit (usually enough for small apps)
+- ✅ PostgreSQL included
+- ✅ Always-on service
+- Sign up: [railway.app](https://railway.app)
+
+**Option 2: Fly.io**
+- ✅ Free tier with resource limits
+- ✅ PostgreSQL available
+- ✅ Good for small apps
+- Sign up: [fly.io](https://fly.io)
+
+**Option 3: PythonAnywhere**
+- ✅ Free tier available
+- ✅ SQLite included (no PostgreSQL needed)
+- ✅ Simple deployment
+- Sign up: [pythonanywhere.com](https://www.pythonanywhere.com)
+
+**Option 4: Use SQLite Instead of PostgreSQL**
+- ✅ 100% FREE forever
+- ✅ No database costs
+- ✅ Works for small teams (SQLite handles concurrent access)
+- ⚠️ Less ideal for many simultaneous users
 
 ---
 
