@@ -428,8 +428,10 @@ def export_labels():
     
     return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv'}
 
+# Initialize database on startup (for both local and cloud)
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     # Get port from environment (for cloud) or use default
     port = int(os.environ.get('PORT', 5001))
     # Use 0.0.0.0 to allow access from other devices on the network
