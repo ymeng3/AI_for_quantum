@@ -27,3 +27,9 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Google Drive credentials (if using service account)
+credentials.json
+token.json
+# But include the generated image mapping
+!google_drive_images.json
+

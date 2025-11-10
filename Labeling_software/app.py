@@ -10,7 +10,31 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuration
-DATA_DIR = Path(__file__).parent.parent / "data"
+# For local development, use local data directory
+# For cloud, images can be in Google Drive or cloud storage
+LOCAL_DATA_DIR = Path(__file__).parent.parent / "data"
+GOOGLE_DRIVE_FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID', '1lRe2jJhgC8Pd6RsCKEirNK4NlWmC1QJU')
+USE_GOOGLE_DRIVE = os.environ.get('USE_GOOGLE_DRIVE', 'false').lower() == 'true'
+GOOGLE_DRIVE_IMAGES_FILE = Path(__file__).parent / 'google_drive_images.json'
+
+# Use local data if available, otherwise will use Google Drive
+if LOCAL_DATA_DIR.exists() and list(LOCAL_DATA_DIR.glob('*')):
+    DATA_DIR = LOCAL_DATA_DIR
+    USE_GOOGLE_DRIVE = False
+else:
+    DATA_DIR = None
+
+# Load Google Drive image mapping if available
+GOOGLE_DRIVE_IMAGE_MAP = {}
+if USE_GOOGLE_DRIVE and GOOGLE_DRIVE_IMAGES_FILE.exists():
+    try:
+        import json
+        with open(GOOGLE_DRIVE_IMAGES_FILE, 'r') as f:
+            data = json.load(f)
+            GOOGLE_DRIVE_IMAGE_MAP = data.get('images', {})
+            print(f"Loaded {len(GOOGLE_DRIVE_IMAGE_MAP)} images from Google Drive mapping")
+    except Exception as e:
+        print(f"Error loading Google Drive image map: {e}")
 
 # Database configuration - use PostgreSQL in cloud, SQLite locally
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -70,24 +94,94 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Get all image files from data directory
+# Get all image files from data directory or Google Drive
 def get_image_files():
     image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
     image_files = []
     
-    for root, dirs, files in os.walk(DATA_DIR):
-        for file in files:
-            if Path(file).suffix.lower() in image_extensions:
-                rel_path = os.path.relpath(os.path.join(root, file), DATA_DIR)
-                # Normalize path separators to forward slashes
-                rel_path = rel_path.replace('\\', '/')
-                image_files.append({
-                    'path': rel_path,
-                    'name': file,
-                    'full_path': os.path.join(root, file)
-                })
+    if USE_GOOGLE_DRIVE and DATA_DIR is None:
+        # Fetch from Google Drive
+        return get_google_drive_images()
+    elif DATA_DIR and DATA_DIR.exists():
+        # Use local directory
+        for root, dirs, files in os.walk(DATA_DIR):
+            for file in files:
+                if Path(file).suffix.lower() in image_extensions:
+                    rel_path = os.path.relpath(os.path.join(root, file), DATA_DIR)
+                    # Normalize path separators to forward slashes
+                    rel_path = rel_path.replace('\\', '/')
+                    image_files.append({
+                        'path': rel_path,
+                        'name': file,
+                        'full_path': os.path.join(root, file)
+                    })
+        return sorted(image_files, key=lambda x: x['name'])
+    else:
+        # No data source available
+        return []
+
+def get_google_drive_images():
+    """Fetch image list from Google Drive using cached mapping file"""
+    # Use the pre-generated mapping file for fast access
+    if GOOGLE_DRIVE_IMAGE_MAP:
+        image_files = []
+        for path, info in GOOGLE_DRIVE_IMAGE_MAP.items():
+            image_files.append({
+                'path': path,
+                'name': info.get('name', Path(path).name),
+                'file_id': info.get('file_id'),
+                'full_path': path
+            })
+        return sorted(image_files, key=lambda x: x['name'])
     
-    return sorted(image_files, key=lambda x: x['name'])
+    # If no mapping file, try to generate it on the fly (slower)
+    return get_google_drive_images_api()
+
+def get_google_drive_images_api():
+    """Fetch image list from Google Drive API (requires API key)"""
+    try:
+        from googleapiclient.discovery import build
+        
+        API_KEY = os.environ.get('GOOGLE_DRIVE_API_KEY', '')
+        if not API_KEY:
+            print("No Google Drive API key. Use google_drive_setup.py to generate image mapping.")
+            return []
+        
+        service = build('drive', 'v3', developerKey=API_KEY)
+        image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
+        image_files = []
+        
+        def get_files_recursive(folder_id, parent_path=''):
+            files = []
+            query = f"'{folder_id}' in parents and trashed=false"
+            results = service.files().list(q=query, fields="files(id, name, mimeType)").execute()
+            items = results.get('files', [])
+            
+            for item in items:
+                mime_type = item.get('mimeType', '')
+                
+                if 'image' in mime_type.lower():
+                    ext = Path(item['name']).suffix.lower()
+                    if ext in image_extensions:
+                        rel_path = f"{parent_path}/{item['name']}" if parent_path else item['name']
+                        files.append({
+                            'path': rel_path,
+                            'name': item['name'],
+                            'file_id': item['id'],
+                            'full_path': rel_path
+                        })
+                elif mime_type == 'application/vnd.google-apps.folder':
+                    folder_path = f"{parent_path}/{item['name']}" if parent_path else item['name']
+                    files.extend(get_files_recursive(item['id'], folder_path))
+            
+            return files
+        
+        image_files = get_files_recursive(GOOGLE_DRIVE_FOLDER_ID)
+        return sorted(image_files, key=lambda x: x['name'])
+        
+    except Exception as e:
+        print(f"Google Drive API error: {e}")
+        return []
 
 @app.route('/')
 def index():
@@ -101,7 +195,7 @@ def get_images():
 
 @app.route('/api/images/<path:image_path>')
 def serve_image(image_path):
-    """Serve image files"""
+    """Serve image files from local storage or Google Drive"""
     # Flask automatically URL-decodes the path, but we need to handle it properly
     # Normalize path separators
     image_path = image_path.replace('\\', '/')
@@ -110,29 +204,83 @@ def serve_image(image_path):
         import urllib.parse
         image_path = urllib.parse.unquote(image_path)
         
-        full_path = os.path.join(DATA_DIR, image_path)
-        if not os.path.exists(full_path):
-            return f"Image not found: {image_path}", 404
-        
-        # Determine MIME type
-        mime_type, _ = mimetypes.guess_type(full_path)
-        if not mime_type:
-            # Default MIME types for common image formats
-            ext = Path(full_path).suffix.lower()
-            mime_map = {'.bmp': 'image/bmp', '.png': 'image/png', '.jpg': 'image/jpeg', 
-                       '.jpeg': 'image/jpeg', '.gif': 'image/gif'}
-            mime_type = mime_map.get(ext, 'application/octet-stream')
-        
-        with open(full_path, 'rb') as f:
-            image_data = f.read()
-        
-        response = Response(image_data, mimetype=mime_type)
-        # Add cache control headers
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+        if USE_GOOGLE_DRIVE and DATA_DIR is None:
+            # Serve from Google Drive
+            return serve_google_drive_image(image_path)
+        elif DATA_DIR and DATA_DIR.exists():
+            # Serve from local directory
+            full_path = os.path.join(DATA_DIR, image_path)
+            if not os.path.exists(full_path):
+                return f"Image not found: {image_path}", 404
+            
+            # Determine MIME type
+            mime_type, _ = mimetypes.guess_type(full_path)
+            if not mime_type:
+                # Default MIME types for common image formats
+                ext = Path(full_path).suffix.lower()
+                mime_map = {'.bmp': 'image/bmp', '.png': 'image/png', '.jpg': 'image/jpeg', 
+                           '.jpeg': 'image/jpeg', '.gif': 'image/gif'}
+                mime_type = mime_map.get(ext, 'application/octet-stream')
+            
+            with open(full_path, 'rb') as f:
+                image_data = f.read()
+            
+            response = Response(image_data, mimetype=mime_type)
+            # Add cache control headers
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
+        else:
+            return "No image source configured", 404
     except Exception as e:
         import traceback
         return f"Error serving image: {str(e)}\n{traceback.format_exc()}", 404
+
+def serve_google_drive_image(image_path):
+    """Serve image from Google Drive using direct download link"""
+    try:
+        import requests
+        
+        # Look up file ID from mapping
+        file_id = None
+        if image_path in GOOGLE_DRIVE_IMAGE_MAP:
+            file_id = GOOGLE_DRIVE_IMAGE_MAP[image_path].get('file_id')
+        elif image_path.startswith('id:'):
+            # Direct file ID provided
+            file_id = image_path[3:]
+        
+        if not file_id:
+            # Try to extract from path or return error
+            return f"Image not found in mapping: {image_path}. Run google_drive_setup.py to generate mapping.", 404
+        
+        # Use direct download link for public files
+        # Format: https://drive.google.com/uc?export=download&id=FILE_ID
+        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        
+        # Fetch image from Google Drive
+        response = requests.get(download_url, allow_redirects=True, timeout=30, stream=True)
+        
+        if response.status_code == 200:
+            # Determine MIME type from extension or content
+            ext = Path(image_path).suffix.lower()
+            mime_map = {'.bmp': 'image/bmp', '.png': 'image/png', '.jpg': 'image/jpeg', 
+                       '.jpeg': 'image/jpeg', '.gif': 'image/gif'}
+            mime_type = mime_map.get(ext, response.headers.get('Content-Type', 'image/png'))
+            
+            # Stream the response for better performance
+            def generate():
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+            
+            flask_response = Response(generate(), mimetype=mime_type)
+            flask_response.headers['Cache-Control'] = 'public, max-age=3600'
+            return flask_response
+        else:
+            return f"Failed to fetch image from Google Drive: {response.status_code}", 404
+            
+    except Exception as e:
+        import traceback
+        return f"Error serving Google Drive image: {str(e)}\n{traceback.format_exc()}", 500
 
 @app.route('/api/labels', methods=['GET'])
 def get_labels():
