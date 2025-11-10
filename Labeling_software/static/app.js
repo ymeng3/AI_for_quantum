@@ -6,6 +6,9 @@ let currentLabels = {
     quality: null,
     reconstruction: null
 };
+// Pagination state
+let currentPage = 1;
+const imagesPerPage = 100; // Show 100 images per page
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,6 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Setup event listeners
 function setupEventListeners() {
+    // Pagination buttons
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderImageGrid(document.getElementById('filterSelect').value);
+        }
+    });
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        currentPage++;
+        renderImageGrid(document.getElementById('filterSelect').value);
+    });
+    
     // Label buttons
     document.querySelectorAll('.label-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -45,6 +60,12 @@ function setupEventListeners() {
     
     // Export button
     document.getElementById('exportBtn').addEventListener('click', exportLabels);
+    
+    // Filter change resets to page 1
+    document.getElementById('filterSelect').addEventListener('change', (e) => {
+        currentPage = 1;
+        renderImageGrid(e.target.value);
+    });
 }
 
 // Load images from API
@@ -99,15 +120,34 @@ function renderImageGrid(filter = 'all') {
         });
     }
     
-    // Limit to first 100 images for performance
-    const displayImages = filteredImages.slice(0, 100);
-    console.log(`Rendering ${displayImages.length} images (out of ${filteredImages.length} total)`);
+    // Pagination
+    const totalPages = Math.ceil(filteredImages.length / imagesPerPage);
+    const startIndex = (currentPage - 1) * imagesPerPage;
+    const endIndex = startIndex + imagesPerPage;
+    const displayImages = filteredImages.slice(startIndex, endIndex);
     
     // Update count display
     const countEl = document.getElementById('imageCount');
     if (countEl) {
-        countEl.textContent = `Showing ${displayImages.length} of ${filteredImages.length}`;
+        countEl.textContent = `Showing ${startIndex + 1}-${Math.min(endIndex, filteredImages.length)} of ${filteredImages.length}`;
     }
+    
+    // Update pagination controls
+    const paginationControls = document.getElementById('paginationControls');
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    
+    if (totalPages > 1) {
+        paginationControls.style.display = 'block';
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+    } else {
+        paginationControls.style.display = 'none';
+    }
+    
+    console.log(`Rendering page ${currentPage}/${totalPages}: ${displayImages.length} images (out of ${filteredImages.length} total)`);
     
     displayImages.forEach((img, index) => {
         const item = document.createElement('div');
