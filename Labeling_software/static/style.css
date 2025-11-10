@@ -311,6 +311,41 @@ tbody tr.selected-row {
     background-color: #d32f2f;
 }
 
+/* Pagination controls */
+.pagination-controls {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    background-color: #f8f9fa;
+}
+
+.pagination-controls button {
+    padding: 8px 16px;
+    margin: 0 5px;
+    border: 1px solid #ddd;
+    background-color: white;
+    color: #333;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#pageInfo {
+    margin: 0 15px;
+    font-size: 14px;
+    color: #666;
+}
+
 .delete-btn:active {
     transform: scale(0.95);
 }

@@ -53,19 +53,14 @@ function setupEventListeners() {
     // Clear button
     document.getElementById('clearBtn').addEventListener('click', clearLabels);
     
-    // Filter select
-    document.getElementById('filterSelect').addEventListener('change', (e) => {
-        filterImages(e.target.value);
-    });
-    
-    // Export button
-    document.getElementById('exportBtn').addEventListener('click', exportLabels);
-    
-    // Filter change resets to page 1
+    // Filter select - resets to page 1 when changed
     document.getElementById('filterSelect').addEventListener('change', (e) => {
         currentPage = 1;
         renderImageGrid(e.target.value);
     });
+    
+    // Export button
+    document.getElementById('exportBtn').addEventListener('click', exportLabels);
 }
 
 // Load images from API
