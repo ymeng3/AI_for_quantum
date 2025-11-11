@@ -849,21 +849,52 @@ function initializePairwiseMode() {
 
 // Select image for pairwise comparison (manual selection)
 function selectImageForPairwise(img, itemElement) {
-    // Determine which image slot to fill (Image 1 or Image 2)
-    // If Image 1 is empty, fill it; otherwise fill Image 2
-    // If both are filled, replace Image 1
+    // Check if clicking on an already selected image (toggle/deselect)
+    if (pairwiseImage1 && pairwiseImage1.path === img.path) {
+        // Deselect Image 1
+        clearPairwiseImage(1);
+        return;
+    }
+    if (pairwiseImage2 && pairwiseImage2.path === img.path) {
+        // Deselect Image 2
+        clearPairwiseImage(2);
+        return;
+    }
+    
+    // Determine which image slot to fill
+    // If both are empty, fill Image 1
+    // If Image 1 is empty but Image 2 is filled, fill Image 1
+    // If Image 2 is empty but Image 1 is filled, fill Image 2
+    // If both are filled, fill Image 1 (replacing it)
     if (!pairwiseImage1) {
         setPairwiseImage(1, img, itemElement);
     } else if (!pairwiseImage2) {
         setPairwiseImage(2, img, itemElement);
     } else {
-        // Both filled - ask user which to replace or replace Image 1 by default
-        if (confirm('Both images are set. Replace Image 1? (Cancel to replace Image 2)')) {
-            setPairwiseImage(1, img, itemElement);
-        } else {
-            setPairwiseImage(2, img, itemElement);
-        }
+        // Both filled - replace Image 1
+        setPairwiseImage(1, img, itemElement);
     }
+}
+
+// Clear a pairwise image slot
+function clearPairwiseImage(slot) {
+    if (slot === 1) {
+        pairwiseImage1 = null;
+        const imgEl = document.getElementById('pairwiseImage1');
+        imgEl.src = '';
+        document.getElementById('pairwiseImage1Info').textContent = 'No image selected';
+    } else {
+        pairwiseImage2 = null;
+        const imgEl = document.getElementById('pairwiseImage2');
+        imgEl.src = '';
+        document.getElementById('pairwiseImage2Info').textContent = 'No image selected';
+    }
+    
+    // Update visual indicators in grid
+    updatePairwiseImageIndicators();
+    
+    // Clear comparisons when images change
+    clearPairwiseComparison();
 }
 
 // Set a pairwise image in a specific slot
