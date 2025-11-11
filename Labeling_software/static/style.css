@@ -209,7 +209,7 @@ body {
 
 .reconstruction-quality-slider {
     width: 100%;
-    height: 6px;
+    height: 8px;
     border-radius: 3px;
     background: #ddd;
     outline: none;
@@ -220,20 +220,22 @@ body {
 .reconstruction-quality-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #4a90e2;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .reconstruction-quality-slider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #4a90e2;
     cursor: pointer;
     border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .quality-score-value {
