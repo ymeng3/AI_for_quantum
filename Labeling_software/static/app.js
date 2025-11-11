@@ -720,11 +720,24 @@ async function deleteLabel(filePath) {
 }
 
 // Export labels as CSV
-function exportLabels() {
-    if (currentMode === 'pairwise') {
-        window.location.href = '/api/pairwise/export';
-    } else {
-        window.location.href = '/api/labels/export';
+async function exportLabels() {
+    try {
+        const response = await fetch('/api/labels/export');
+        const csv = await response.text();
+        
+        // Create download link
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'labels_export.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error exporting labels:', error);
+        alert('Error exporting labels');
     }
 }
 
