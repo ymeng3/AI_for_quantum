@@ -141,7 +141,15 @@ function setupEventListeners() {
     });
     
     // Export button
-    document.getElementById('exportBtn').addEventListener('click', exportLabels);
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        // Export based on which tab is active
+        const absoluteTab = document.getElementById('absoluteLabelsTab');
+        if (absoluteTab.classList.contains('active')) {
+            exportLabels();
+        } else {
+            exportPairwiseComparisons();
+        }
+    });
 }
 
 // Load images from API
