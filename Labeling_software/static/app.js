@@ -725,7 +725,7 @@ async function deleteLabel(filePath) {
                 clearLabels();
             }
             
-            alert('Label deleted successfully!');
+            // No alert - deletion is already confirmed, just update UI silently
         } else {
             alert('Error deleting label: ' + (result.message || 'Unknown error'));
         }
@@ -1130,7 +1130,7 @@ async function deletePairwiseComparison(compId, image1, image2, recon) {
         if (response.ok && result.success) {
             // Reload pairwise comparisons
             await loadPairwiseComparisons();
-            alert('Comparison deleted successfully!');
+            // No alert - deletion is already confirmed, just update UI silently
         } else {
             alert('Error deleting comparison: ' + (result.message || 'Unknown error'));
         }
