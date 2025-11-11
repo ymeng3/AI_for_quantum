@@ -1,0 +1,297 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\geometry{margin=1in}
+
+\title{Self-Supervised Learning Pipeline for RHEED Pattern Classification\\
+Using SimCLR and k-Nearest Neighbors}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document describes a complete pipeline for unsupervised representation learning and classification of Reflection High-Energy Electron Diffraction (RHEED) patterns. The pipeline consists of three main components: (1) self-supervised training of a ResNet18 encoder using SimCLR contrastive learning, (2) embedding generation for all trajectory images, and (3) k-nearest neighbor classification using labeled seed images. The approach enables classification of RHEED patterns with minimal labeled data by leveraging the learned embedding space.
+\end{abstract}
+
+\section{Introduction}
+
+RHEED patterns are critical for understanding crystal growth processes. Traditional classification methods require extensive labeled datasets, which are often unavailable. We propose a self-supervised learning approach that learns meaningful representations from unlabeled trajectory data, then uses a small set of labeled seed images for classification via k-nearest neighbors.
+
+\section{Pipeline Overview}
+
+The pipeline consists of three main stages:
+
+\begin{enumerate}
+    \item \textbf{Self-Supervised Training:} Train a ResNet18 encoder using SimCLR contrastive learning on unlabeled trajectory images
+    \item \textbf{Embedding Generation:} Encode all trajectory images and labeled seed images into a 512-dimensional embedding space
+    \item \textbf{k-NN Classification:} Classify new images by finding nearest labeled neighbors in the embedding space
+\end{enumerate}
+
+\section{Data Preprocessing}
+
+\subsection{Image Normalization}
+
+All images are preprocessed using a standardized pipeline:
+
+\begin{itemize}
+    \item \textbf{Load as grayscale:} Convert images to single-channel grayscale
+    \item \textbf{Percentile normalization:} For \texttt{.npy} files, normalize using 1st and 99th percentiles to handle outliers
+    \item \textbf{Center masking:} Apply circular mask to center region (60\% of image radius) to focus on peripheral RHEED patterns
+    \item \textbf{Resize:} Resize all images to $224 \times 224$ pixels
+\end{itemize}
+
+The preprocessing function is defined as:
+\begin{equation}
+g_{\text{canon}}(I) = \text{Resize}(\text{Mask}(\text{Normalize}(I), f=0.6))
+\end{equation}
+
+where $f=0.6$ is the masking fraction.
+
+\subsection{Data Augmentation}
+
+For SimCLR training, we apply physics-friendly augmentations:
+\begin{itemize}
+    \item Random affine transformations: rotation ($\pm 7°$), translation ($\pm 5\%$), scaling ($0.95$-$1.05$)
+    \item Color jitter: brightness and contrast ($\pm 15\%$)
+    \item Gaussian blur: kernel size 3, $\sigma \in [0.1, 1.0]$
+\end{itemize}
+
+\section{Model Architecture}
+
+\subsection{Encoder Network}
+
+The encoder is based on ResNet18 architecture:
+
+\begin{itemize}
+    \item \textbf{Backbone:} ResNet18 (without final fully-connected layer)
+    \item \textbf{Output dimension:} 512-dimensional feature vector
+    \item \textbf{Projection head:} Two-layer MLP (512 → 512 → 128) with ReLU activation
+    \item \textbf{Normalization:} L2-normalization applied to projected embeddings
+\end{itemize}
+
+The forward pass is:
+\begin{align}
+h &= \text{ResNet18}(x) \in \mathbb{R}^{512} \\
+z &= \text{MLP}(h) \in \mathbb{R}^{128} \\
+z_{\text{norm}} &= \frac{z}{\|z\|_2}
+\end{align}
+
+\subsection{Training Objective}
+
+We use the NT-Xent (Normalized Temperature-scaled Cross Entropy) loss:
+
+\begin{equation}
+\mathcal{L}_{\text{SimCLR}} = -\log \frac{\exp(\text{sim}(z_i, z_j) / \tau)}{\sum_{k=1}^{2N} \mathbf{1}_{[k \neq i]} \exp(\text{sim}(z_i, z_k) / \tau)}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $z_i, z_j$ are augmented views of the same image
+    \item $\tau = 0.2$ is the temperature parameter
+    \item $\text{sim}(u,v) = u^T v / \|u\| \|v\|$ is cosine similarity
+    \item $N$ is the batch size
+\end{itemize}
+
+\section{Training Procedure}
+
+\subsection{Training Configuration}
+
+\begin{itemize}
+    \item \textbf{Dataset:} $\sim$1,170 trajectory images (subsampled from 3,510)
+    \item \textbf{Batch size:} 256
+    \item \textbf{Optimizer:} AdamW with learning rate $3 \times 10^{-4}$, weight decay $10^{-4}$
+    \item \textbf{Epochs:} 40
+    \item \textbf{Gradient clipping:} Maximum norm 1.0
+    \item \textbf{Training time:} $\sim$30 minutes on CPU
+\end{itemize}
+
+\subsection{Training Results}
+
+The model achieved:
+\begin{itemize}
+    \item Initial loss: 5.46 (epoch 1)
+    \item Final loss: 2.96 (epoch 40)
+    \item Loss reduction: 46\% over 40 epochs
+    \item Consistent loss decrease throughout training
+\end{itemize}
+
+\section{Embedding Generation}
+
+\subsection{Encoding Pipeline}
+
+All images are encoded using the trained encoder:
+
+\begin{algorithm}
+\caption{Image Encoding}
+\begin{algorithmic}[1]
+\Procedure{Encode}{$x$}
+    \State $I \gets \text{Preprocess}(x)$ \Comment{Resize, mask, normalize}
+    \State $I_{3ch} \gets \text{Repeat}(I, 3)$ \Comment{Convert to 3-channel}
+    \State $I_{\text{norm}} \gets \text{Normalize}(I_{3ch}, \mu=0.5, \sigma=0.25)$
+    \State $h \gets \text{Encoder}(I_{\text{norm}})$ \Comment{512-dim feature}
+    \State $h_{\text{norm}} \gets h / \|h\|_2$ \Comment{L2 normalize}
+    \State \Return $h_{\text{norm}}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Embedding Index}
+
+We build a FAISS index for efficient similarity search:
+\begin{itemize}
+    \item \textbf{Index type:} Inner Product (for cosine similarity on L2-normalized vectors)
+    \item \textbf{Total embeddings:} 3,531 (3,510 trajectory + 21 labeled seeds)
+    \item \textbf{Dimension:} 512
+\end{itemize}
+
+\section{k-Nearest Neighbor Classification}
+
+\subsection{Classification Strategy}
+
+The key insight is to use all embeddings for navigation but only labeled seeds for voting:
+
+\begin{algorithm}
+\caption{k-NN Classification with Labeled Seeds Only}
+\begin{algorithmic}[1]
+\Procedure{Classify}{$z_{\text{query}}, k$}
+    \State $N \gets \text{Search}(z_{\text{query}}, k \times 10)$ \Comment{Search in all embeddings}
+    \State $N_{\text{labeled}} \gets \text{Filter}(N, \text{is\_labeled})$ \Comment{Keep only labeled neighbors}
+    \State $N_{\text{top-k}} \gets N_{\text{labeled}}[:k]$ \Comment{Select top $k$ labeled neighbors}
+    \State $V \gets \text{WeightedVote}(N_{\text{top-k}})$ \Comment{Distance-weighted voting}
+    \State \Return $\arg\max(V)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Weighted Voting}
+
+For each labeled neighbor $i$ with similarity $s_i$:
+\begin{equation}
+w_i = s_i \quad \text{(weight = similarity)}
+\end{equation}
+
+The predicted class is:
+\begin{equation}
+\hat{y} = \arg\max_{c} \sum_{i: y_i = c} w_i
+\end{equation}
+
+\subsection{Confidence Score}
+
+Confidence is computed as:
+\begin{equation}
+\text{confidence} = \frac{\max_c \sum_{i: y_i = c} w_i}{\sum_i w_i}
+\end{equation}
+
+\section{Results}
+
+\subsection{Test Set Performance}
+
+On 7 test images:
+\begin{itemize}
+    \item \textbf{Overall accuracy:} 71.43\% (5/7 correct)
+    \item \textbf{HTR classification:} 100\% (4/4 correct)
+    \item \textbf{RT13 classification:} 33\% (1/3 correct)
+    \item \textbf{Issues:} 2 RT13 images found no labeled neighbors (marked as UNKNOWN)
+\end{itemize}
+
+\subsection{Similarity Search Results}
+
+For HTR\_12.png and RT13\_11.png queries:
+\begin{itemize}
+    \item Both queries return similar top matches (same trajectory image)
+    \item Maximum similarity: $\sim$0.785 (relatively low)
+    \item Top match: \texttt{1141\_HL251004A\_846.37C\_1445(03).bmp}
+\end{itemize}
+
+\subsection{Embedding Space Analysis}
+
+Analysis revealed:
+\begin{itemize}
+    \item \textbf{Low discrimination:} HTR\_12 and RT13\_11 have 0.9999 similarity
+    \item \textbf{Embedding variance:} 0.000048 (very low, embeddings cluster together)
+    \item \textbf{Seed similarity:} HTR\_12 more similar to RT13 seeds (0.9965) than HTR seeds (0.9844)
+    \item \textbf{Issue:} Model not learning discriminative features between RT13 and HTR
+\end{itemize}
+
+\section{Limitations and Future Work}
+
+\subsection{Current Limitations}
+
+\begin{enumerate}
+    \item \textbf{Lack of discrimination:} Embeddings for RT13 and HTR are too similar
+    \item \textbf{Low similarity to trajectory images:} Test images have max similarity $\sim$0.785
+    \item \textbf{Training data:} Trajectory images may not contain clear RT13/HTR patterns
+    \item \textbf{Center masking:} May remove discriminative features
+\end{enumerate}
+
+\subsection{Potential Improvements}
+
+\begin{enumerate}
+    \item \textbf{Semi-supervised training:} Include labeled seed images in training
+    \item \textbf{Adjust preprocessing:} Reduce or modify center masking
+    \item \textbf{Better augmentations:} Tailor augmentations to RHEED pattern characteristics
+    \item \textbf{Supervised fine-tuning:} Fine-tune encoder on labeled data after self-supervised pre-training
+    \item \textbf{Alternative architectures:} Try Vision Transformers or specialized RHEED architectures
+\end{enumerate}
+
+\section{Conclusion}
+
+We have successfully implemented a self-supervised learning pipeline for RHEED pattern analysis. The pipeline demonstrates:
+\begin{itemize}
+    \item Successful training of a contrastive learning model on unlabeled data
+    \item Effective embedding generation and indexing
+    \item Working k-NN classification framework
+\end{itemize}
+
+However, the embedding space lacks sufficient discrimination between RT13 and HTR patterns, indicating the need for improved training strategies or incorporating labeled data into the training process.
+
+\section{Technical Details}
+
+\subsection{Implementation}
+
+\begin{itemize}
+    \item \textbf{Framework:} PyTorch 1.10.1
+    \item \textbf{Model:} ResNet18 from torchvision
+    \item \textbf{Indexing:} FAISS (CPU version)
+    \item \textbf{Environment:} Python 3.6, virtual environment \texttt{anneal-rl}
+\end{itemize}
+
+\subsection{File Structure}
+
+\begin{verbatim}
+project_quantum/
+├── classification.py          # Training script
+├── embed_and_retrieve.py      # Embedding generation
+├── knn_classifier.py          # k-NN classifier
+├── query_test_images.py       # Query interface
+├── scripts/                   # SLURM job scripts
+├── artifacts/
+│   ├── encoders/              # Trained models
+│   ├── embeddings.npy         # All embeddings
+│   └── index_all.faiss        # FAISS index
+└── log/                       # Job logs
+\end{verbatim}
+
+\section{References}
+
+\begin{itemize}
+    \item Chen, T., et al. (2020). A Simple Framework for Contrastive Learning of Visual Representations. ICML.
+    \item He, K., et al. (2016). Deep Residual Learning for Image Recognition. CVPR.
+    \item Johnson, J., et al. (2019). Billion-scale similarity search with GPUs. IEEE Transactions on Big Data.
+\end{itemize}
+
+\end{document}
+
