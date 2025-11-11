@@ -37,9 +37,17 @@ token.json
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Large data files (uncomment if you don't want to track data folder)
-# data/
+# Large data files - exclude image files and large datasets
+data/Trajectories/**/*.bmp
+data/**/*.png
+data/**/*.jpg
+data/**/*.jpeg
 
-# Large presentation files (uncomment if you don't want to track)
-# *.pptx
-# *.pdf
+# Large presentation files
+*.pptx
+*.pdf
+
+# Large artifacts
+artifacts/**/*.npz
+artifacts/**/*.pkl
+artifacts/**/*.h5
