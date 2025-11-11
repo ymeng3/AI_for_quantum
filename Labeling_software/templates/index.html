@@ -42,49 +42,59 @@
             
             <div class="labeling-controls">
                 <div class="label-group">
-                    <label>Quality:</label>
-                    <div class="button-group">
-                        <button class="label-btn" data-type="quality" data-value="Ideal">Ideal</button>
-                        <button class="label-btn" data-type="quality" data-value="Good/Usable">Good/Usable</button>
-                        <button class="label-btn" data-type="quality" data-value="Bad/Unusable">Bad/Unusable</button>
-                        <button class="label-btn" data-type="quality" data-value="Unsure/Skip">Unsure/Skip</button>
-                    </div>
-                </div>
-                
-                <div class="label-group">
-                    <label>Reconstruction (Multiple Selection):</label>
+                    <label>Reconstruction (Multiple Selection with Quality Score):</label>
                     <div id="reconstructionCheckboxes" class="checkbox-group">
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
                                 <input type="checkbox" class="reconstruction-checkbox" data-value="HTR" value="HTR">
                                 <span>HTR</span>
                             </label>
-                            <input type="number" class="reconstruction-score" data-recon="HTR" min="0" max="10" 
-                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                            <div class="reconstruction-quality-control" data-recon="HTR" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="HTR">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="HTR" min="0" max="10" value="5" 
+                                       style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
                         </div>
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
                                 <input type="checkbox" class="reconstruction-checkbox" data-value="√13 x √13 R33.7°" value="√13 x √13 R33.7°">
                                 <span>√13 x √13 R33.7°</span>
                             </label>
-                            <input type="number" class="reconstruction-score" data-recon="√13 x √13 R33.7°" min="0" max="10" 
-                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                            <div class="reconstruction-quality-control" data-recon="√13 x √13 R33.7°" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="√13 x √13 R33.7°">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="√13 x √13 R33.7°" min="0" max="10" value="5" 
+                                       style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
                         </div>
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
                                 <input type="checkbox" class="reconstruction-checkbox" data-value="(2 x 2)" value="(2 x 2)">
                                 <span>(2 x 2)</span>
                             </label>
-                            <input type="number" class="reconstruction-score" data-recon="(2 x 2)" min="0" max="10" 
-                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                            <div class="reconstruction-quality-control" data-recon="(2 x 2)" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="(2 x 2)">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="(2 x 2)" min="0" max="10" value="5" 
+                                       style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
                         </div>
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
                                 <input type="checkbox" class="reconstruction-checkbox" data-value="Other" value="Other">
                                 <span>Other</span>
                             </label>
-                            <input type="number" class="reconstruction-score" data-recon="Other" min="0" max="10" 
-                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                            <div class="reconstruction-quality-control" data-recon="Other" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="Other">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="Other" min="0" max="10" value="5" 
+                                       style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -136,9 +146,8 @@
                     <thead>
                         <tr>
                             <th>File</th>
-                            <th>Quality</th>
                             <th>Reconstruction</th>
-                            <th>Scores</th>
+                            <th>Quality Scores</th>
                             <th>Labeler</th>
                             <th>Notes</th>
                             <th>Action</th>

@@ -3,9 +3,8 @@ let images = [];
 let labels = {};
 let currentImage = null;
 let currentLabels = {
-    quality: null,
-    reconstruction: [],  // Now a list for multiple selections
-    reconstruction_scores: {},  // Dict: {reconstruction: score}
+    reconstruction: [],  // List of selected reconstruction types
+    reconstruction_scores: {},  // Dict: {reconstruction: quality_score (0-10)}
     notes: ''  // Optional notes/metadata
 };
 let currentLabelerName = '';
@@ -55,56 +54,61 @@ function setupEventListeners() {
         mainImage.style.filter = `brightness(${value}%)`;
     });
     
-    // Quality buttons (single select)
-    document.querySelectorAll('.label-btn[data-type="quality"]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const value = e.target.dataset.value;
-            
-            // Toggle active state
-            document.querySelectorAll('.label-btn[data-type="quality"]').forEach(b => {
-                b.classList.remove('active');
-            });
-            e.target.classList.add('active');
-            
-            currentLabels.quality = value;
-        });
-    });
-    
     // Reconstruction checkboxes (multiple select)
     document.querySelectorAll('.reconstruction-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
             const value = e.target.dataset.value;
-            const scoreInput = document.querySelector(`.reconstruction-score[data-recon="${value}"]`);
+            const qualityControl = document.querySelector(`.reconstruction-quality-control[data-recon="${value}"]`);
             
             if (e.target.checked) {
-                // Add to list and show score input
+                // Add to list and show quality score slider
                 if (!currentLabels.reconstruction.includes(value)) {
                     currentLabels.reconstruction.push(value);
                 }
-                if (scoreInput) {
-                    scoreInput.style.display = 'inline-block';
+                // Initialize default score of 5 if not set
+                if (!currentLabels.reconstruction_scores[value]) {
+                    currentLabels.reconstruction_scores[value] = 5;
+                }
+                if (qualityControl) {
+                    qualityControl.style.display = 'block';
+                    // Set slider value
+                    const slider = qualityControl.querySelector('.reconstruction-quality-slider');
+                    const valueSpan = qualityControl.querySelector('.quality-score-value');
+                    if (slider && valueSpan) {
+                        slider.value = currentLabels.reconstruction_scores[value];
+                        valueSpan.textContent = currentLabels.reconstruction_scores[value];
+                    }
                 }
             } else {
-                // Remove from list and hide score input
+                // Remove from list and hide quality control
                 currentLabels.reconstruction = currentLabels.reconstruction.filter(r => r !== value);
                 delete currentLabels.reconstruction_scores[value];
-                if (scoreInput) {
-                    scoreInput.style.display = 'none';
-                    scoreInput.value = '';
+                if (qualityControl) {
+                    qualityControl.style.display = 'none';
+                    // Reset slider to default
+                    const slider = qualityControl.querySelector('.reconstruction-quality-slider');
+                    const valueSpan = qualityControl.querySelector('.quality-score-value');
+                    if (slider && valueSpan) {
+                        slider.value = 5;
+                        valueSpan.textContent = '5';
+                    }
                 }
             }
         });
     });
     
-    // Reconstruction score inputs
-    document.querySelectorAll('.reconstruction-score').forEach(scoreInput => {
-        scoreInput.addEventListener('input', (e) => {
+    // Reconstruction quality score sliders
+    document.querySelectorAll('.reconstruction-quality-slider').forEach(slider => {
+        slider.addEventListener('input', (e) => {
             const recon = e.target.dataset.recon;
             const score = parseInt(e.target.value);
+            const valueSpan = document.querySelector(`.quality-score-value[data-recon="${recon}"]`);
+            
             if (!isNaN(score) && score >= 0 && score <= 10) {
                 currentLabels.reconstruction_scores[recon] = score;
-            } else if (e.target.value === '') {
-                delete currentLabels.reconstruction_scores[recon];
+                if (valueSpan) {
+                    valueSpan.textContent = score;
+                }
             }
         });
     });
@@ -273,22 +277,34 @@ function updateImageGridStatus() {
         const label = labels[path];
         let badge = item.querySelector('.status-badge');
         
-        if (label && label.quality && label.reconstruction) {
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'status-badge';
-                item.appendChild(badge);
+        // Check if image is labeled (has reconstruction selected)
+        if (label && label.reconstruction) {
+            try {
+                const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
+                if (Array.isArray(recon) && recon.length > 0) {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge';
+                        item.appendChild(badge);
+                    }
+                    badge.textContent = '✓';
+                    badge.className = 'status-badge labeled';
+                } else if (recon) {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge';
+                        item.appendChild(badge);
+                    }
+                    badge.textContent = '✓';
+                    badge.className = 'status-badge labeled';
+                } else if (badge) {
+                    badge.remove();
+                }
+            } catch {
+                if (badge) {
+                    badge.remove();
+                }
             }
-            badge.textContent = '✓';
-            badge.className = 'status-badge labeled';
-        } else if (label && (label.quality || label.reconstruction)) {
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'status-badge';
-                item.appendChild(badge);
-            }
-            badge.textContent = '~';
-            badge.className = 'status-badge partial';
         } else if (badge) {
             badge.remove();
         }
@@ -328,8 +344,6 @@ async function selectImage(img) {
         const response = await fetch(`/api/labels/${encodeURIComponent(img.path)}`);
         const labelData = await response.json();
         
-        currentLabels.quality = labelData.quality || null;
-        
         // Handle reconstruction (can be array or single value)
         if (labelData.reconstruction) {
             if (Array.isArray(labelData.reconstruction)) {
@@ -341,7 +355,7 @@ async function selectImage(img) {
             currentLabels.reconstruction = [];
         }
         
-        // Handle reconstruction scores
+        // Handle reconstruction scores (quality scores per reconstruction)
         if (labelData.reconstruction_scores) {
             if (typeof labelData.reconstruction_scores === 'object') {
                 currentLabels.reconstruction_scores = labelData.reconstruction_scores;
@@ -375,7 +389,6 @@ async function selectImage(img) {
         updateButtonStates();
     } catch (error) {
         console.error('Error loading label:', error);
-        currentLabels.quality = null;
         currentLabels.reconstruction = [];
         currentLabels.reconstruction_scores = {};
         currentLabels.notes = '';
@@ -392,34 +405,26 @@ async function selectImage(img) {
 
 // Update button states based on current labels
 function updateButtonStates() {
-    // Clear all active states
-    document.querySelectorAll('.label-btn[data-type="quality"]').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Set quality active state
-    if (currentLabels.quality) {
-        const btn = document.querySelector(`.label-btn[data-type="quality"][data-value="${currentLabels.quality}"]`);
-        if (btn) btn.classList.add('active');
-    }
-    
-    // Update reconstruction checkboxes
+    // Update reconstruction checkboxes and quality sliders
     document.querySelectorAll('.reconstruction-checkbox').forEach(checkbox => {
         const value = checkbox.dataset.value;
         checkbox.checked = currentLabels.reconstruction.includes(value);
         
-        // Show/hide score input
-        const scoreInput = document.querySelector(`.reconstruction-score[data-recon="${value}"]`);
-        if (scoreInput) {
+        // Show/hide quality control
+        const qualityControl = document.querySelector(`.reconstruction-quality-control[data-recon="${value}"]`);
+        if (qualityControl) {
             if (checkbox.checked) {
-                scoreInput.style.display = 'inline-block';
-                // Set score value if exists
-                if (currentLabels.reconstruction_scores[value]) {
-                    scoreInput.value = currentLabels.reconstruction_scores[value];
+                qualityControl.style.display = 'block';
+                // Set slider and value display
+                const slider = qualityControl.querySelector('.reconstruction-quality-slider');
+                const valueSpan = qualityControl.querySelector('.quality-score-value');
+                if (slider && valueSpan) {
+                    const score = currentLabels.reconstruction_scores[value] || 5;
+                    slider.value = score;
+                    valueSpan.textContent = score;
                 }
             } else {
-                scoreInput.style.display = 'none';
-                scoreInput.value = '';
+                qualityControl.style.display = 'none';
             }
         }
     });
@@ -446,7 +451,7 @@ async function saveLabel() {
             body: JSON.stringify({
                 file_path: currentImage.path,
                 file_name: currentImage.name,
-                quality: currentLabels.quality,
+                quality: null,  // No longer used, but kept for backward compatibility
                 reconstruction: currentLabels.reconstruction.length > 0 ? currentLabels.reconstruction : null,
                 reconstruction_scores: Object.keys(currentLabels.reconstruction_scores).length > 0 ? currentLabels.reconstruction_scores : null,
                 labeler_name: currentLabelerName,
@@ -469,7 +474,6 @@ async function saveLabel() {
 
 // Clear labels
 function clearLabels() {
-    currentLabels.quality = null;
     currentLabels.reconstruction = [];
     currentLabels.reconstruction_scores = {};
     currentLabels.notes = '';
@@ -531,7 +535,6 @@ function renderLabelsTable() {
         
         row.innerHTML = `
             <td>${label.file_name}</td>
-            <td>${label.quality || '-'}</td>
             <td>${reconstructionText}</td>
             <td>${scoresText}</td>
             <td>${label.labeler_name || '-'}</td>
