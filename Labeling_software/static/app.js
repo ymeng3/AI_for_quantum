@@ -876,10 +876,10 @@ async function savePairwiseComparison(loadNext = false) {
         return;
     }
     
-    // Check if at least one comparison was made
+    // Check if at least one comparison was made (including "not_apply")
     const comparisons = Object.keys(pairwiseComparisons);
     if (comparisons.length === 0) {
-        alert('Please make at least one comparison before saving');
+        alert('Please make at least one comparison or mark as "Not Apply" before saving');
         return;
     }
     
