@@ -322,27 +322,41 @@ function renderImageGrid(filter = 'all') {
     
     // Force load first few images immediately for better UX
     setTimeout(() => {
-        const firstImages = grid.querySelectorAll('.image-item img[data-src]');
-        const imagesToLoadImmediately = Math.min(9, firstImages.length); // Load first 9 (3x3 grid)
+        const allImages = grid.querySelectorAll('.image-item img[data-src]');
+        const imagesToLoadImmediately = Math.min(9, allImages.length); // Load first 9 (3x3 grid)
+        
+        // Load first 9 immediately
         for (let i = 0; i < imagesToLoadImmediately; i++) {
-            if (firstImages[i] && firstImages[i].dataset.src) {
-                firstImages[i].src = firstImages[i].dataset.src;
-                firstImages[i].removeAttribute('data-src');
+            if (allImages[i] && allImages[i].dataset.src) {
+                allImages[i].src = allImages[i].dataset.src;
+                allImages[i].removeAttribute('data-src');
                 if (window.imageObserver) {
-                    window.imageObserver.unobserve(firstImages[i]);
+                    window.imageObserver.unobserve(allImages[i]);
                 }
             }
         }
         
-        // After loading first 9, trigger observer check for visible images
+        // For remaining images, ensure they're all observed
+        // Also check if any are already visible and should load immediately
         if (window.imageObserver) {
-            // Force a check by observing all remaining images
             const remainingImages = grid.querySelectorAll('.image-item img[data-src]');
             remainingImages.forEach(img => {
-                window.imageObserver.observe(img);
+                // Check if image is already in viewport
+                const rect = img.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight + 200 && rect.bottom > -200;
+                
+                if (isVisible && img.dataset.src) {
+                    // Load immediately if already visible
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    window.imageObserver.unobserve(img);
+                } else {
+                    // Observe for lazy loading
+                    window.imageObserver.observe(img);
+                }
             });
         }
-    }, 100); // Small delay to ensure DOM is ready
+    }, 50); // Small delay to ensure DOM is ready
 }
 
 // Filter images
