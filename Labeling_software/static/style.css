@@ -313,6 +313,41 @@ body {
     border-color: #4a90e2 !important;
 }
 
+/* Labels tabs */
+.label-tab {
+    transition: all 0.2s;
+}
+
+.label-tab:hover {
+    background-color: #f0f0f0;
+}
+
+.label-tab.active {
+    color: #4a90e2;
+    border-bottom-color: #4a90e2 !important;
+    background-color: white;
+}
+
+.labels-section {
+    display: block;
+}
+
+/* Pairwise comparison winner styling */
+.winner-1 {
+    color: #4a90e2;
+    font-weight: 600;
+}
+
+.winner-2 {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.winner-tie {
+    color: #ff9800;
+    font-weight: 600;
+}
+
 .action-buttons {
     display: flex;
     gap: 10px;

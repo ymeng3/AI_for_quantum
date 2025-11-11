@@ -24,8 +24,10 @@ let pairwiseNotes = '';
 document.addEventListener('DOMContentLoaded', () => {
     loadImages();
     loadLabels();
+    loadPairwiseComparisons();
     setupEventListeners();
     initializePairwiseMode();
+    setupLabelsTabs();
 });
 
 // Setup event listeners
@@ -871,6 +873,9 @@ async function savePairwiseComparison(loadNext = false) {
         const allOk = results.every(r => r.ok);
         
         if (allOk) {
+            // Reload pairwise comparisons to update table
+            await loadPairwiseComparisons();
+            
             if (loadNext) {
                 loadRandomPair();
             } else {
@@ -908,5 +913,100 @@ function clearPairwiseComparison() {
         if (valueSpan) valueSpan.textContent = '100%';
         if (img) img.style.filter = 'brightness(100%)';
     });
+}
+
+// Setup labels table tabs
+function setupLabelsTabs() {
+    document.getElementById('absoluteLabelsTab').addEventListener('click', () => {
+        switchLabelsTab('absolute');
+    });
+    
+    document.getElementById('pairwiseLabelsTab').addEventListener('click', () => {
+        switchLabelsTab('pairwise');
+    });
+}
+
+// Switch between absolute and pairwise labels tabs
+function switchLabelsTab(tab) {
+    // Update tab buttons
+    document.getElementById('absoluteLabelsTab').classList.toggle('active', tab === 'absolute');
+    document.getElementById('pairwiseLabelsTab').classList.toggle('active', tab === 'pairwise');
+    
+    // Show/hide sections
+    document.getElementById('absoluteLabelsSection').style.display = tab === 'absolute' ? 'block' : 'none';
+    document.getElementById('pairwiseLabelsSection').style.display = tab === 'pairwise' ? 'block' : 'none';
+}
+
+// Render pairwise comparisons table
+function renderPairwiseTable() {
+    const tbody = document.getElementById('pairwiseTableBody');
+    tbody.innerHTML = '';
+    
+    if (pairwiseComparisonsList.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="7" style="text-align: center; padding: 20px; color: #999;">No pairwise comparisons yet</td>';
+        tbody.appendChild(row);
+        return;
+    }
+    
+    pairwiseComparisonsList.forEach(comp => {
+        const row = document.createElement('tr');
+        
+        const winnerText = comp.winner === '1' ? 'Image 1' : comp.winner === '2' ? 'Image 2' : 'Tie';
+        const winnerClass = comp.winner === '1' ? 'winner-1' : comp.winner === '2' ? 'winner-2' : 'winner-tie';
+        
+        const notesText = comp.notes || '-';
+        const notesDisplay = notesText.length > 30 ? notesText.substring(0, 30) + '...' : notesText;
+        
+        row.innerHTML = `
+            <td>${comp.image1_name}</td>
+            <td>${comp.image2_name}</td>
+            <td>${comp.reconstruction_type}</td>
+            <td class="${winnerClass}">${winnerText}</td>
+            <td>${comp.labeler_name || '-'}</td>
+            <td title="${notesText !== '-' ? notesText : ''}" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${notesDisplay}</td>
+            <td></td>
+        `;
+        
+        // Add delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deletePairwiseComparison(comp.id, comp.image1_path, comp.image2_path, comp.reconstruction_type);
+        };
+        
+        const actionCell = row.querySelector('td:last-child');
+        actionCell.appendChild(deleteBtn);
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Delete a pairwise comparison
+async function deletePairwiseComparison(compId, image1, image2, recon) {
+    if (!confirm(`Delete comparison: ${image1.split('/').pop()} vs ${image2.split('/').pop()} (${recon})?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/pairwise/${compId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            // Reload pairwise comparisons
+            await loadPairwiseComparisons();
+            alert('Comparison deleted successfully!');
+        } else {
+            alert('Error deleting comparison: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error deleting pairwise comparison:', error);
+        alert('Error deleting comparison');
+    }
 }
 

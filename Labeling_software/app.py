@@ -645,6 +645,43 @@ def save_pairwise_comparison():
     
     return jsonify({'success': True})
 
+@app.route('/api/pairwise', methods=['GET'])
+def get_pairwise_comparisons():
+    """Get all pairwise comparisons"""
+    conn = get_db_connection()
+    
+    if USE_POSTGRES:
+        c = conn.cursor(cursor_factory=RealDictCursor)
+        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+        comparisons = [dict(row) for row in c.fetchall()]
+    else:
+        c = conn.cursor()
+        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+        comparisons = [dict(row) for row in c.fetchall()]
+    
+    conn.close()
+    return jsonify(comparisons)
+
+@app.route('/api/pairwise/<int:comp_id>', methods=['DELETE'])
+def delete_pairwise_comparison(comp_id):
+    """Delete a pairwise comparison"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    if USE_POSTGRES:
+        c.execute('DELETE FROM pairwise_comparisons WHERE id = %s', (comp_id,))
+    else:
+        c.execute('DELETE FROM pairwise_comparisons WHERE id = ?', (comp_id,))
+    
+    deleted = c.rowcount
+    conn.commit()
+    conn.close()
+    
+    if deleted > 0:
+        return jsonify({'success': True, 'message': 'Comparison deleted successfully'})
+    else:
+        return jsonify({'success': False, 'message': 'Comparison not found'}), 404
+
 @app.route('/api/pairwise/export', methods=['GET'])
 def export_pairwise_comparisons():
     """Export all pairwise comparisons as CSV"""

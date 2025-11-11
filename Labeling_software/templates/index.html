@@ -121,13 +121,6 @@
             
             <!-- Pairwise Comparison Mode -->
             <div id="pairwiseMode" class="labeling-mode" style="display: none;">
-                <!-- Labeler Name Input (shared) -->
-                <div class="labeler-name-section" style="padding: 10px 15px; border-bottom: 1px solid #ddd; background-color: #f8f9fa;">
-                    <label for="pairwiseLabelerName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Labeler Name:</label>
-                    <input type="text" id="pairwiseLabelerName" placeholder="Enter your name (e.g., YM for Yang Meng)" 
-                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                </div>
-                
                 <!-- Pairwise Image Display -->
                 <div class="pairwise-images" style="display: flex; gap: 15px; padding: 20px; background-color: #f8f9fa;">
                     <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
@@ -161,6 +154,13 @@
                                    style="width: 100%; height: 4px;">
                         </div>
                     </div>
+                </div>
+                
+                <!-- Labeler Name Input (below images) -->
+                <div class="labeler-name-section" style="padding: 10px 15px; border-top: 1px solid #ddd; background-color: #f8f9fa;">
+                    <label for="pairwiseLabelerName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Labeler Name:</label>
+                    <input type="text" id="pairwiseLabelerName" placeholder="Enter your name (e.g., YM for Yang Meng)" 
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                 </div>
                 
                 <!-- Pairwise Comparison Controls -->
@@ -244,22 +244,53 @@
                 <h2>Collected Labels</h2>
                 <button id="exportBtn" class="export-btn">Export CSV</button>
             </div>
+            <div class="labels-tabs" style="display: flex; border-bottom: 2px solid #e0e0e0; background-color: #fafafa;">
+                <button id="absoluteLabelsTab" class="label-tab active" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                    Absolute Scoring
+                </button>
+                <button id="pairwiseLabelsTab" class="label-tab" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                    Pairwise Comparison
+                </button>
+            </div>
             <div class="table-container">
-                <table id="labelsTable">
-                    <thead>
-                        <tr>
-                            <th>File</th>
-                            <th>Reconstruction</th>
-                            <th>Quality Scores</th>
-                            <th>Labeler</th>
-                            <th>Notes</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="labelsTableBody">
-                        <!-- Labels will be loaded here -->
-                    </tbody>
-                </table>
+                <!-- Absolute Scoring Labels Table -->
+                <div id="absoluteLabelsSection" class="labels-section">
+                    <table id="labelsTable">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Reconstruction</th>
+                                <th>Quality Scores</th>
+                                <th>Labeler</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="labelsTableBody">
+                            <!-- Labels will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pairwise Comparison Labels Table -->
+                <div id="pairwiseLabelsSection" class="labels-section" style="display: none;">
+                    <table id="pairwiseTable">
+                        <thead>
+                            <tr>
+                                <th>Image 1</th>
+                                <th>Image 2</th>
+                                <th>Reconstruction</th>
+                                <th>Winner</th>
+                                <th>Labeler</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pairwiseTableBody">
+                            <!-- Pairwise comparisons will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
