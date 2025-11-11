@@ -628,39 +628,63 @@ def export_labels():
 @app.route('/api/pairwise', methods=['POST'])
 def save_pairwise_comparison():
     """Save a pairwise comparison"""
-    data = request.json
-    image1_path = data.get('image1_path')
-    image1_name = data.get('image1_name')
-    image2_path = data.get('image2_path')
-    image2_name = data.get('image2_name')
-    reconstruction_type = data.get('reconstruction_type')
-    winner = data.get('winner')  # '1', '2', or 'tie'
-    labeler_name = data.get('labeler_name', '').strip()
-    notes = data.get('notes', '').strip()
-    
-    if not all([image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner]):
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    if USE_POSTGRES:
-        c.execute('''
-            INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
-                                             reconstruction_type, winner, labeler_name, notes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
-    else:
-        c.execute('''
-            INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
-                                             reconstruction_type, winner, labeler_name, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'success': True})
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        image1_path = data.get('image1_path')
+        image1_name = data.get('image1_name')
+        image2_path = data.get('image2_path')
+        image2_name = data.get('image2_name')
+        reconstruction_type = data.get('reconstruction_type')
+        winner = data.get('winner')  # '1', '2', 'tie', or 'not_apply'
+        labeler_name = data.get('labeler_name', '').strip()
+        notes = data.get('notes', '').strip() if data.get('notes') else ''
+        
+        # Validate required fields
+        if not all([image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner]):
+            missing = []
+            if not image1_path: missing.append('image1_path')
+            if not image1_name: missing.append('image1_name')
+            if not image2_path: missing.append('image2_path')
+            if not image2_name: missing.append('image2_name')
+            if not reconstruction_type: missing.append('reconstruction_type')
+            if not winner: missing.append('winner')
+            return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
+        
+        # Validate winner value
+        if winner not in ['1', '2', 'tie', 'not_apply']:
+            return jsonify({'error': f'Invalid winner value: {winner}. Must be "1", "2", "tie", or "not_apply"'}), 400
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        try:
+            if USE_POSTGRES:
+                c.execute('''
+                    INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
+                                                     reconstruction_type, winner, labeler_name, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
+            else:
+                c.execute('''
+                    INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
+                                                     reconstruction_type, winner, labeler_name, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
+            
+            conn.commit()
+            return jsonify({'success': True})
+        except Exception as db_error:
+            conn.rollback()
+            return jsonify({'error': f'Database error: {str(db_error)}'}), 500
+        finally:
+            conn.close()
+    except Exception as e:
+        import traceback
+        print(f"Error in save_pairwise_comparison: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/pairwise', methods=['GET'])
 def get_pairwise_comparisons():

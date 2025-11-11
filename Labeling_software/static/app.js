@@ -905,9 +905,22 @@ async function savePairwiseComparison(loadNext = false) {
         });
         
         const results = await Promise.all(savePromises);
-        const allOk = results.every(r => r.ok);
         
-        if (allOk) {
+        // Check each result and get error messages
+        const errors = [];
+        for (let i = 0; i < results.length; i++) {
+            const response = results[i];
+            if (!response.ok) {
+                try {
+                    const errorData = await response.json();
+                    errors.push(`Reconstruction "${comparisons[i]}": ${errorData.get('error', 'Unknown error')}`);
+                } catch (e) {
+                    errors.push(`Reconstruction "${comparisons[i]}": HTTP ${response.status}`);
+                }
+            }
+        }
+        
+        if (errors.length === 0) {
             // Reload pairwise comparisons to update table
             await loadPairwiseComparisons();
             
@@ -917,7 +930,8 @@ async function savePairwiseComparison(loadNext = false) {
                 alert('Comparison saved successfully!');
             }
         } else {
-            alert('Error saving some comparisons');
+            console.error('Errors saving comparisons:', errors);
+            alert('Error saving some comparisons:\n' + errors.join('\n'));
         }
     } catch (error) {
         console.error('Error saving pairwise comparison:', error);
