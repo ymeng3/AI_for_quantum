@@ -987,8 +987,23 @@ function renderPairwiseTable() {
     pairwiseComparisonsList.forEach(comp => {
         const row = document.createElement('tr');
         
-        const winnerText = comp.winner === '1' ? 'Image 1' : comp.winner === '2' ? 'Image 2' : 'Tie';
-        const winnerClass = comp.winner === '1' ? 'winner-1' : comp.winner === '2' ? 'winner-2' : 'winner-tie';
+        let winnerText, winnerClass;
+        if (comp.winner === '1') {
+            winnerText = 'Image 1';
+            winnerClass = 'winner-1';
+        } else if (comp.winner === '2') {
+            winnerText = 'Image 2';
+            winnerClass = 'winner-2';
+        } else if (comp.winner === 'tie') {
+            winnerText = 'Tie';
+            winnerClass = 'winner-tie';
+        } else if (comp.winner === 'not_apply') {
+            winnerText = 'Not Apply';
+            winnerClass = 'winner-not-apply';
+        } else {
+            winnerText = comp.winner;
+            winnerClass = '';
+        }
         
         const notesText = comp.notes || '-';
         const notesDisplay = notesText.length > 30 ? notesText.substring(0, 30) + '...' : notesText;
