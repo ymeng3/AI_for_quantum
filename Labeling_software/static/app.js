@@ -298,8 +298,8 @@ function renderImageGrid(filter = 'all') {
                     badge.textContent = '✓';
                     badge.classList.add('labeled');
                 } else if (recon) {
-                    badge.textContent = '✓';
-                    badge.classList.add('labeled');
+            badge.textContent = '✓';
+            badge.classList.add('labeled');
                 }
             } catch {
                 // Ignore parse errors
@@ -409,19 +409,19 @@ function updateImageGridStatus() {
             try {
                 const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
                 if (Array.isArray(recon) && recon.length > 0) {
-                    if (!badge) {
-                        badge = document.createElement('div');
-                        badge.className = 'status-badge';
-                        item.appendChild(badge);
-                    }
-                    badge.textContent = '✓';
-                    badge.className = 'status-badge labeled';
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'status-badge';
+                item.appendChild(badge);
+            }
+            badge.textContent = '✓';
+            badge.className = 'status-badge labeled';
                 } else if (recon) {
-                    if (!badge) {
-                        badge = document.createElement('div');
-                        badge.className = 'status-badge';
-                        item.appendChild(badge);
-                    }
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'status-badge';
+                item.appendChild(badge);
+            }
                     badge.textContent = '✓';
                     badge.className = 'status-badge labeled';
                 } else if (badge) {
@@ -784,10 +784,8 @@ function switchMode(mode) {
     document.getElementById('absoluteMode').style.display = mode === 'absolute' ? 'flex' : 'none';
     document.getElementById('pairwiseMode').style.display = mode === 'pairwise' ? 'block' : 'none';
     
-    if (mode === 'pairwise') {
-        // Initialize pairwise mode - load random pair
-        loadRandomPair();
-    }
+    // Don't auto-load random pair - let user select manually
+    // User can click "Random Pair" button if they want random selection
 }
 
 // Initialize pairwise mode
@@ -1021,11 +1019,6 @@ function clearPairwiseComparison() {
         btn.style.color = '#333';
     });
 }
-    document.getElementById('pairwiseNotesInput').value = '';
-    
-    // Reset all pairwise buttons
-    document.querySelectorAll('.pairwise-btn').forEach(btn => {
-        btn.classList.remove('active');
         btn.style.backgroundColor = 'white';
         btn.style.borderColor = '#ddd';
         btn.style.color = '#333';
