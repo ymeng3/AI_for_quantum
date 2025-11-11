@@ -12,11 +12,20 @@ let currentLabelerName = '';
 let currentPage = 1;
 const imagesPerPage = 100; // Show 100 images per page
 
+// Pairwise comparison state
+let currentMode = 'absolute'; // 'absolute' or 'pairwise'
+let pairwiseImage1 = null;
+let pairwiseImage2 = null;
+let pairwiseComparisons = {}; // {reconstruction_type: winner} where winner is '1', '2', or 'tie'
+let pairwiseLabelerName = '';
+let pairwiseNotes = '';
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     loadImages();
     loadLabels();
     setupEventListeners();
+    initializePairwiseMode();
 });
 
 // Setup event listeners
@@ -118,6 +127,10 @@ function setupEventListeners() {
     
     // Clear button
     document.getElementById('clearBtn').addEventListener('click', clearLabels);
+    
+    // Mode selector buttons
+    document.getElementById('absoluteModeBtn').addEventListener('click', () => switchMode('absolute'));
+    document.getElementById('pairwiseModeBtn').addEventListener('click', () => switchMode('pairwise'));
     
     // Filter select - resets to page 1 when changed
     document.getElementById('filterSelect').addEventListener('change', (e) => {
@@ -603,6 +616,216 @@ async function deleteLabel(filePath) {
 
 // Export labels as CSV
 function exportLabels() {
-    window.location.href = '/api/labels/export';
+    if (currentMode === 'pairwise') {
+        window.location.href = '/api/pairwise/export';
+    } else {
+        window.location.href = '/api/labels/export';
+    }
+}
+
+// Switch between absolute and pairwise modes
+function switchMode(mode) {
+    currentMode = mode;
+    
+    // Update button states
+    document.getElementById('absoluteModeBtn').classList.toggle('active', mode === 'absolute');
+    document.getElementById('pairwiseModeBtn').classList.toggle('active', mode === 'pairwise');
+    
+    // Show/hide mode sections
+    document.getElementById('absoluteMode').style.display = mode === 'absolute' ? 'flex' : 'none';
+    document.getElementById('pairwiseMode').style.display = mode === 'pairwise' ? 'block' : 'none';
+    
+    if (mode === 'pairwise') {
+        // Initialize pairwise mode - load random pair
+        loadRandomPair();
+    }
+}
+
+// Initialize pairwise mode
+function initializePairwiseMode() {
+    // Pairwise labeler name input
+    document.getElementById('pairwiseLabelerName').addEventListener('input', (e) => {
+        pairwiseLabelerName = e.target.value.trim();
+    });
+    
+    // Pairwise notes input
+    document.getElementById('pairwiseNotesInput').addEventListener('input', (e) => {
+        pairwiseNotes = e.target.value;
+    });
+    
+    // Pairwise comparison buttons
+    document.querySelectorAll('.pairwise-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const recon = e.target.dataset.recon;
+            const winner = e.target.dataset.winner;
+            
+            // Update button states for this reconstruction type
+            document.querySelectorAll(`.pairwise-btn[data-recon="${recon}"]`).forEach(b => {
+                b.classList.remove('active');
+                b.style.backgroundColor = 'white';
+                b.style.borderColor = '#ddd';
+            });
+            
+            e.target.classList.add('active');
+            e.target.style.backgroundColor = '#4a90e2';
+            e.target.style.borderColor = '#4a90e2';
+            e.target.style.color = 'white';
+            
+            pairwiseComparisons[recon] = winner;
+        });
+    });
+    
+    // Pairwise brightness sliders
+    document.querySelectorAll('.brightness-slider-pairwise').forEach(slider => {
+        slider.addEventListener('input', (e) => {
+            const imageNum = e.target.dataset.image;
+            const value = parseInt(e.target.value);
+            const valueSpan = document.querySelector(`.brightness-value-pairwise[data-image="${imageNum}"]`);
+            const img = document.getElementById(`pairwiseImage${imageNum}`);
+            
+            if (valueSpan) valueSpan.textContent = `${value}%`;
+            if (img) img.style.filter = `brightness(${value}%)`;
+        });
+    });
+    
+    // Pairwise save button
+    document.getElementById('pairwiseSaveBtn').addEventListener('click', savePairwiseComparison);
+    
+    // Pairwise next button
+    document.getElementById('pairwiseNextBtn').addEventListener('click', () => {
+        savePairwiseComparison(true); // Save and load next
+    });
+    
+    // Pairwise clear button
+    document.getElementById('pairwiseClearBtn').addEventListener('click', clearPairwiseComparison);
+}
+
+// Load a random pair of images for comparison
+function loadRandomPair() {
+    if (images.length < 2) {
+        alert('Need at least 2 images for pairwise comparison');
+        return;
+    }
+    
+    // Select two random different images
+    let idx1 = Math.floor(Math.random() * images.length);
+    let idx2 = Math.floor(Math.random() * images.length);
+    while (idx2 === idx1) {
+        idx2 = Math.floor(Math.random() * images.length);
+    }
+    
+    pairwiseImage1 = images[idx1];
+    pairwiseImage2 = images[idx2];
+    
+    // Load images
+    const encodedPath1 = pairwiseImage1.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    const encodedPath2 = pairwiseImage2.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    
+    const img1 = document.getElementById('pairwiseImage1');
+    const img2 = document.getElementById('pairwiseImage2');
+    
+    img1.src = `/api/images/${encodedPath1}`;
+    img2.src = `/api/images/${encodedPath2}`;
+    
+    img1.onload = function() {
+        const slider = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
+        const brightness = slider ? parseInt(slider.value) : 100;
+        this.style.filter = `brightness(${brightness}%)`;
+    };
+    
+    img2.onload = function() {
+        const slider = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
+        const brightness = slider ? parseInt(slider.value) : 100;
+        this.style.filter = `brightness(${brightness}%)`;
+    };
+    
+    document.getElementById('pairwiseImage1Info').textContent = pairwiseImage1.name;
+    document.getElementById('pairwiseImage2Info').textContent = pairwiseImage2.name;
+    
+    // Clear previous comparisons
+    clearPairwiseComparison();
+}
+
+// Save pairwise comparison
+async function savePairwiseComparison(loadNext = false) {
+    if (!pairwiseImage1 || !pairwiseImage2) {
+        alert('Please wait for images to load');
+        return;
+    }
+    
+    if (!pairwiseLabelerName) {
+        alert('Please enter your name before saving');
+        return;
+    }
+    
+    // Check if at least one comparison was made
+    const comparisons = Object.keys(pairwiseComparisons);
+    if (comparisons.length === 0) {
+        alert('Please make at least one comparison before saving');
+        return;
+    }
+    
+    try {
+        // Save each comparison separately
+        const savePromises = comparisons.map(recon => {
+            return fetch('/api/pairwise', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    image1_path: pairwiseImage1.path,
+                    image1_name: pairwiseImage1.name,
+                    image2_path: pairwiseImage2.path,
+                    image2_name: pairwiseImage2.name,
+                    reconstruction_type: recon,
+                    winner: pairwiseComparisons[recon],
+                    labeler_name: pairwiseLabelerName,
+                    notes: pairwiseNotes || null
+                })
+            });
+        });
+        
+        const results = await Promise.all(savePromises);
+        const allOk = results.every(r => r.ok);
+        
+        if (allOk) {
+            if (loadNext) {
+                loadRandomPair();
+            } else {
+                alert('Comparison saved successfully!');
+            }
+        } else {
+            alert('Error saving some comparisons');
+        }
+    } catch (error) {
+        console.error('Error saving pairwise comparison:', error);
+        alert('Error saving comparison');
+    }
+}
+
+// Clear pairwise comparison
+function clearPairwiseComparison() {
+    pairwiseComparisons = {};
+    pairwiseNotes = '';
+    document.getElementById('pairwiseNotesInput').value = '';
+    
+    // Reset all pairwise buttons
+    document.querySelectorAll('.pairwise-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = 'white';
+        btn.style.borderColor = '#ddd';
+        btn.style.color = '#333';
+    });
+    
+    // Reset brightness sliders
+    document.querySelectorAll('.brightness-slider-pairwise').forEach(slider => {
+        slider.value = 100;
+        const imageNum = slider.dataset.image;
+        const valueSpan = document.querySelector(`.brightness-value-pairwise[data-image="${imageNum}"]`);
+        const img = document.getElementById(`pairwiseImage${imageNum}`);
+        if (valueSpan) valueSpan.textContent = '100%';
+        if (img) img.style.filter = 'brightness(100%)';
+    });
 }
 

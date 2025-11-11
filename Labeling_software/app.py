@@ -91,6 +91,22 @@ def init_db():
             c.execute('ALTER TABLE labels ADD COLUMN IF NOT EXISTS notes TEXT')
         except:
             pass  # Columns might already exist
+        
+        # Create pairwise comparisons table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS pairwise_comparisons (
+                id SERIAL PRIMARY KEY,
+                image1_path TEXT NOT NULL,
+                image1_name TEXT NOT NULL,
+                image2_path TEXT NOT NULL,
+                image2_name TEXT NOT NULL,
+                reconstruction_type TEXT NOT NULL,
+                winner TEXT NOT NULL,
+                labeler_name TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
     else:
         c.execute('''
             CREATE TABLE IF NOT EXISTS labels (
@@ -119,6 +135,22 @@ def init_db():
             c.execute('ALTER TABLE labels ADD COLUMN notes TEXT')
         except:
             pass
+        
+        # Create pairwise comparisons table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS pairwise_comparisons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                image1_path TEXT NOT NULL,
+                image1_name TEXT NOT NULL,
+                image2_path TEXT NOT NULL,
+                image2_name TEXT NOT NULL,
+                reconstruction_type TEXT NOT NULL,
+                winner TEXT NOT NULL,
+                labeler_name TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
     
     conn.commit()
     conn.close()
@@ -570,6 +602,68 @@ def export_labels():
         notes_escaped = notes.replace('"', '""') if notes != '-' else '-'
         
         csv_lines.append(f'{file_name},{quality},"{reconstruction}","{scores}",{labeler_name},"{notes_escaped}"')
+    
+    return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv'}
+
+@app.route('/api/pairwise', methods=['POST'])
+def save_pairwise_comparison():
+    """Save a pairwise comparison"""
+    data = request.json
+    image1_path = data.get('image1_path')
+    image1_name = data.get('image1_name')
+    image2_path = data.get('image2_path')
+    image2_name = data.get('image2_name')
+    reconstruction_type = data.get('reconstruction_type')
+    winner = data.get('winner')  # '1', '2', or 'tie'
+    labeler_name = data.get('labeler_name', '').strip()
+    notes = data.get('notes', '').strip()
+    
+    if not all([image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner]):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    if USE_POSTGRES:
+        c.execute('''
+            INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
+                                             reconstruction_type, winner, labeler_name, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
+    else:
+        c.execute('''
+            INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
+                                             reconstruction_type, winner, labeler_name, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+
+@app.route('/api/pairwise/export', methods=['GET'])
+def export_pairwise_comparisons():
+    """Export all pairwise comparisons as CSV"""
+    conn = get_db_connection()
+    
+    if USE_POSTGRES:
+        c = conn.cursor(cursor_factory=RealDictCursor)
+        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+        comparisons = [dict(row) for row in c.fetchall()]
+    else:
+        c = conn.cursor()
+        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+        comparisons = [dict(row) for row in c.fetchall()]
+    
+    conn.close()
+    
+    # Generate CSV
+    csv_lines = ['Image1_Path,Image1_Name,Image2_Path,Image2_Name,Reconstruction_Type,Winner,Labeler_Name,Notes,Created_At']
+    for comp in comparisons:
+        csv_lines.append(f'{comp["image1_path"]},{comp["image1_name"]},{comp["image2_path"]},{comp["image2_name"]},'
+                         f'{comp["reconstruction_type"]},{comp["winner"]},{comp.get("labeler_name", "-")},'
+                         f'"{comp.get("notes", "-").replace('"', '""')}",{comp.get("created_at", "-")}')
     
     return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv'}
 

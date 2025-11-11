@@ -43,6 +43,41 @@ body {
     color: #333;
 }
 
+/* Mode selector buttons */
+.mode-selector {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.mode-btn {
+    padding: 6px 12px;
+    border: 2px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+    color: #333;
+}
+
+.mode-btn:hover {
+    border-color: #4a90e2;
+    background-color: #f0f7ff;
+}
+
+.mode-btn.active {
+    background-color: #4a90e2;
+    color: white;
+    border-color: #4a90e2;
+}
+
+.labeling-mode {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 /* Left Section: Labeling */
 .labeling-section {
     min-width: 0;
@@ -260,6 +295,22 @@ body {
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+/* Pairwise comparison styles */
+.pairwise-btn {
+    transition: all 0.2s;
+}
+
+.pairwise-btn:hover:not(.active) {
+    border-color: #4a90e2 !important;
+    background-color: #f0f7ff !important;
+}
+
+.pairwise-btn.active {
+    background-color: #4a90e2 !important;
+    color: white !important;
+    border-color: #4a90e2 !important;
 }
 
 .action-buttons {

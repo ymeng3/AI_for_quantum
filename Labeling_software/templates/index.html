@@ -15,32 +15,39 @@
         <div class="section labeling-section">
             <div class="section-header">
                 <h2>Image Labeling</h2>
-            </div>
-            
-            <div class="image-display">
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background-color: #000; min-height: 300px;">
-                    <img id="mainImage" src="" alt="RHEED Image" style="max-width: 100%; max-height: 400px; object-fit: contain; border: 2px solid #333;">
-                    <div class="image-info" id="imageInfo" style="margin-top: 10px; color: #fff; font-size: 14px; text-align: center;">Select an image to label</div>
-                </div>
-                
-                <!-- Brightness Control -->
-                <div class="brightness-control" style="padding: 10px 15px; background-color: #f8f9fa; border-top: 1px solid #ddd;">
-                    <label for="brightnessSlider" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333; font-size: 13px;">
-                        Brightness: <span id="brightnessValue">100%</span>
-                    </label>
-                    <input type="range" id="brightnessSlider" min="0" max="200" value="100" 
-                           style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
-                </div>
-                
-                <!-- Labeler Name Input -->
-                <div class="labeler-name-section" style="padding: 10px 15px; border-top: 1px solid #ddd; background-color: #f8f9fa;">
-                    <label for="labelerName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Labeler Name:</label>
-                    <input type="text" id="labelerName" placeholder="Enter your name (e.g., Yang Meng)" 
-                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                <div class="mode-selector" style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-size: 13px; color: #666;">Mode:</label>
+                    <button id="absoluteModeBtn" class="mode-btn active" data-mode="absolute">Absolute Scoring</button>
+                    <button id="pairwiseModeBtn" class="mode-btn" data-mode="pairwise">Pairwise Comparison</button>
                 </div>
             </div>
             
-            <div class="labeling-controls">
+            <!-- Absolute Scoring Mode -->
+            <div id="absoluteMode" class="labeling-mode">
+                <div class="image-display">
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background-color: #000; min-height: 300px;">
+                        <img id="mainImage" src="" alt="RHEED Image" style="max-width: 100%; max-height: 400px; object-fit: contain; border: 2px solid #333;">
+                        <div class="image-info" id="imageInfo" style="margin-top: 10px; color: #fff; font-size: 14px; text-align: center;">Select an image to label</div>
+                    </div>
+                    
+                    <!-- Brightness Control -->
+                    <div class="brightness-control" style="padding: 10px 15px; background-color: #f8f9fa; border-top: 1px solid #ddd;">
+                        <label for="brightnessSlider" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333; font-size: 13px;">
+                            Brightness: <span id="brightnessValue">100%</span>
+                        </label>
+                        <input type="range" id="brightnessSlider" min="0" max="200" value="100" 
+                               style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                    </div>
+                    
+                    <!-- Labeler Name Input -->
+                    <div class="labeler-name-section" style="padding: 10px 15px; border-top: 1px solid #ddd; background-color: #f8f9fa;">
+                        <label for="labelerName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Labeler Name:</label>
+                        <input type="text" id="labelerName" placeholder="Enter your name (e.g., Yang Meng)" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+                
+                <div class="labeling-controls">
                 <div class="label-group">
                     <label>Reconstruction (Multiple Selection with Quality Score):</label>
                     <div id="reconstructionCheckboxes" class="checkbox-group">
@@ -108,6 +115,102 @@
                 <div class="action-buttons">
                     <button id="saveBtn" class="save-btn">Save Label</button>
                     <button id="clearBtn" class="clear-btn">Clear</button>
+                </div>
+                </div>
+            </div>
+            
+            <!-- Pairwise Comparison Mode -->
+            <div id="pairwiseMode" class="labeling-mode" style="display: none;">
+                <!-- Labeler Name Input (shared) -->
+                <div class="labeler-name-section" style="padding: 10px 15px; border-bottom: 1px solid #ddd; background-color: #f8f9fa;">
+                    <label for="pairwiseLabelerName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Labeler Name:</label>
+                    <input type="text" id="pairwiseLabelerName" placeholder="Enter your name (e.g., Yang Meng)" 
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                </div>
+                
+                <!-- Pairwise Image Display -->
+                <div class="pairwise-images" style="display: flex; gap: 15px; padding: 20px; background-color: #f8f9fa;">
+                    <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 100%; aspect-ratio: 1; background-color: #000; display: flex; align-items: center; justify-content: center; border: 3px solid #4a90e2; border-radius: 8px; margin-bottom: 10px;">
+                            <img id="pairwiseImage1" src="" alt="Image 1" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                        <div class="image-info" id="pairwiseImage1Info" style="font-size: 12px; color: #666; text-align: center; margin-bottom: 10px;">Image 1</div>
+                        <div class="brightness-control-pairwise" style="width: 100%; padding: 8px; background-color: white; border-radius: 4px; margin-bottom: 10px;">
+                            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 3px;">
+                                Brightness: <span class="brightness-value-pairwise" data-image="1">100%</span>
+                            </label>
+                            <input type="range" class="brightness-slider-pairwise" data-image="1" min="0" max="200" value="100" 
+                                   style="width: 100%; height: 4px;">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 80px;">
+                        <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 20px;">VS</div>
+                    </div>
+                    
+                    <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 100%; aspect-ratio: 1; background-color: #000; display: flex; align-items: center; justify-content: center; border: 3px solid #4a90e2; border-radius: 8px; margin-bottom: 10px;">
+                            <img id="pairwiseImage2" src="" alt="Image 2" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                        <div class="image-info" id="pairwiseImage2Info" style="font-size: 12px; color: #666; text-align: center; margin-bottom: 10px;">Image 2</div>
+                        <div class="brightness-control-pairwise" style="width: 100%; padding: 8px; background-color: white; border-radius: 4px; margin-bottom: 10px;">
+                            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 3px;">
+                                Brightness: <span class="brightness-value-pairwise" data-image="2">100%</span>
+                            </label>
+                            <input type="range" class="brightness-slider-pairwise" data-image="2" min="0" max="200" value="100" 
+                                   style="width: 100%; height: 4px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pairwise Comparison Controls -->
+                <div class="pairwise-controls" style="padding: 20px;">
+                    <div class="label-group">
+                        <label style="display: block; font-weight: 600; margin-bottom: 15px; color: #333; font-size: 14px;">
+                            Which image shows MORE of each reconstruction type?
+                        </label>
+                        
+                        <div class="pairwise-reconstruction-group" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">HTR</label>
+                                <div class="pairwise-buttons" style="display: flex; gap: 10px;">
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="1" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="2" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                </div>
+                            </div>
+                            
+                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">√13 x √13 R33.7°</label>
+                                <div class="pairwise-buttons" style="display: flex; gap: 10px;">
+                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="1" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="2" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                </div>
+                            </div>
+                            
+                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">(2 x 2)</label>
+                                <div class="pairwise-buttons" style="display: flex; gap: 10px;">
+                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="1" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="2" style="flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="label-group" style="margin-top: 20px;">
+                        <label for="pairwiseNotesInput">Notes (Optional):</label>
+                        <textarea id="pairwiseNotesInput" placeholder="Add any notes about this comparison..." 
+                                  style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="action-buttons" style="margin-top: 20px;">
+                        <button id="pairwiseSaveBtn" class="save-btn">Save Comparison</button>
+                        <button id="pairwiseNextBtn" class="save-btn" style="background-color: #28a745;">Next Pair</button>
+                        <button id="pairwiseClearBtn" class="clear-btn">Clear</button>
+                    </div>
                 </div>
             </div>
         </div>
