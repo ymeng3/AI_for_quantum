@@ -16,9 +16,26 @@
             <div class="section-header">
                 <h2>Image Labeling</h2>
             </div>
+            
+            <!-- Labeler Name Input -->
+            <div class="labeler-name-section" style="padding: 10px 15px; border-bottom: 1px solid #ddd; background-color: #f8f9fa;">
+                <label for="labelerName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Labeler Name:</label>
+                <input type="text" id="labelerName" placeholder="Enter your name (e.g., Shuolong Yang)" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            
             <div class="image-display">
-                <img id="mainImage" src="" alt="RHEED Image">
-                <div class="image-info" id="imageInfo">Select an image to label</div>
+                <div class="brightness-control" style="padding: 10px 15px; background-color: #f8f9fa; border-bottom: 1px solid #ddd;">
+                    <label for="brightnessSlider" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333; font-size: 13px;">
+                        Brightness: <span id="brightnessValue">100%</span>
+                    </label>
+                    <input type="range" id="brightnessSlider" min="0" max="200" value="100" 
+                           style="width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none;">
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background-color: #000; min-height: 300px;">
+                    <img id="mainImage" src="" alt="RHEED Image" style="max-width: 100%; max-height: 400px; object-fit: contain; border: 2px solid #333;">
+                    <div class="image-info" id="imageInfo" style="margin-top: 10px; color: #fff; font-size: 14px; text-align: center;">Select an image to label</div>
+                </div>
             </div>
             
             <div class="labeling-controls">
@@ -33,13 +50,47 @@
                 </div>
                 
                 <div class="label-group">
-                    <label>Reconstruction:</label>
-                    <div class="button-group">
-                        <button class="label-btn" data-type="reconstruction" data-value="HTR">HTR</button>
-                        <button class="label-btn" data-type="reconstruction" data-value="√13 x √13 R33.7°">√13 x √13 R33.7°</button>
-                        <button class="label-btn" data-type="reconstruction" data-value="(2 x 2)">(2 x 2)</button>
-                        <button class="label-btn" data-type="reconstruction" data-value="Other">Other</button>
+                    <label>Reconstruction (Multiple Selection):</label>
+                    <div id="reconstructionCheckboxes" class="checkbox-group">
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="HTR" value="HTR">
+                                <span>HTR</span>
+                            </label>
+                            <input type="number" class="reconstruction-score" data-recon="HTR" min="0" max="10" 
+                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="√13 x √13 R33.7°" value="√13 x √13 R33.7°">
+                                <span>√13 x √13 R33.7°</span>
+                            </label>
+                            <input type="number" class="reconstruction-score" data-recon="√13 x √13 R33.7°" min="0" max="10" 
+                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="(2 x 2)" value="(2 x 2)">
+                                <span>(2 x 2)</span>
+                            </label>
+                            <input type="number" class="reconstruction-score" data-recon="(2 x 2)" min="0" max="10" 
+                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="Other" value="Other">
+                                <span>Other</span>
+                            </label>
+                            <input type="number" class="reconstruction-score" data-recon="Other" min="0" max="10" 
+                                   placeholder="Score (0-10)" style="width: 80px; margin-left: 10px; padding: 4px; display: none;">
+                        </div>
                     </div>
+                </div>
+                
+                <div class="label-group">
+                    <label for="notesInput">Notes / Metadata (Optional):</label>
+                    <textarea id="notesInput" placeholder="Add any notes or metadata about this image..." 
+                              style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
                 </div>
                 
                 <div class="action-buttons">
@@ -84,7 +135,10 @@
                         <tr>
                             <th>File</th>
                             <th>Quality</th>
-                            <th>Label</th>
+                            <th>Reconstruction</th>
+                            <th>Scores</th>
+                            <th>Labeler</th>
+                            <th>Notes</th>
                             <th>Action</th>
                         </tr>
                     </thead>

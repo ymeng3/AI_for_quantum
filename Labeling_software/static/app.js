@@ -4,8 +4,11 @@ let labels = {};
 let currentImage = null;
 let currentLabels = {
     quality: null,
-    reconstruction: null
+    reconstruction: [],  // Now a list for multiple selections
+    reconstruction_scores: {},  // Dict: {reconstruction: score}
+    notes: ''  // Optional notes/metadata
 };
+let currentLabelerName = '';
 // Pagination state
 let currentPage = 1;
 const imagesPerPage = 100; // Show 100 images per page
@@ -31,19 +34,78 @@ function setupEventListeners() {
         renderImageGrid(document.getElementById('filterSelect').value);
     });
     
-    // Label buttons
-    document.querySelectorAll('.label-btn').forEach(btn => {
+    // Labeler name input
+    document.getElementById('labelerName').addEventListener('input', (e) => {
+        currentLabelerName = e.target.value.trim();
+    });
+    
+    // Notes input
+    document.getElementById('notesInput').addEventListener('input', (e) => {
+        currentLabels.notes = e.target.value;
+    });
+    
+    // Brightness slider
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const brightnessValue = document.getElementById('brightnessValue');
+    const mainImage = document.getElementById('mainImage');
+    
+    brightnessSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        brightnessValue.textContent = `${value}%`;
+        mainImage.style.filter = `brightness(${value}%)`;
+    });
+    
+    // Quality buttons (single select)
+    document.querySelectorAll('.label-btn[data-type="quality"]').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const type = e.target.dataset.type;
             const value = e.target.dataset.value;
             
             // Toggle active state
-            document.querySelectorAll(`.label-btn[data-type="${type}"]`).forEach(b => {
+            document.querySelectorAll('.label-btn[data-type="quality"]').forEach(b => {
                 b.classList.remove('active');
             });
             e.target.classList.add('active');
             
-            currentLabels[type] = value;
+            currentLabels.quality = value;
+        });
+    });
+    
+    // Reconstruction checkboxes (multiple select)
+    document.querySelectorAll('.reconstruction-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            const value = e.target.dataset.value;
+            const scoreInput = document.querySelector(`.reconstruction-score[data-recon="${value}"]`);
+            
+            if (e.target.checked) {
+                // Add to list and show score input
+                if (!currentLabels.reconstruction.includes(value)) {
+                    currentLabels.reconstruction.push(value);
+                }
+                if (scoreInput) {
+                    scoreInput.style.display = 'inline-block';
+                }
+            } else {
+                // Remove from list and hide score input
+                currentLabels.reconstruction = currentLabels.reconstruction.filter(r => r !== value);
+                delete currentLabels.reconstruction_scores[value];
+                if (scoreInput) {
+                    scoreInput.style.display = 'none';
+                    scoreInput.value = '';
+                }
+            }
+        });
+    });
+    
+    // Reconstruction score inputs
+    document.querySelectorAll('.reconstruction-score').forEach(scoreInput => {
+        scoreInput.addEventListener('input', (e) => {
+            const recon = e.target.dataset.recon;
+            const score = parseInt(e.target.value);
+            if (!isNaN(score) && score >= 0 && score <= 10) {
+                currentLabels.reconstruction_scores[recon] = score;
+            } else if (e.target.value === '') {
+                delete currentLabels.reconstruction_scores[recon];
+            }
         });
     });
     
@@ -248,6 +310,10 @@ async function selectImage(img) {
     };
     mainImg.onload = function() {
         this.style.border = '2px solid #333';
+        // Apply current brightness setting
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        const brightness = parseInt(brightnessSlider.value);
+        this.style.filter = `brightness(${brightness}%)`;
     };
     document.getElementById('imageInfo').textContent = img.name;
     
@@ -263,41 +329,111 @@ async function selectImage(img) {
         const labelData = await response.json();
         
         currentLabels.quality = labelData.quality || null;
-        currentLabels.reconstruction = labelData.reconstruction || null;
+        
+        // Handle reconstruction (can be array or single value)
+        if (labelData.reconstruction) {
+            if (Array.isArray(labelData.reconstruction)) {
+                currentLabels.reconstruction = labelData.reconstruction;
+            } else {
+                currentLabels.reconstruction = [labelData.reconstruction];
+            }
+        } else {
+            currentLabels.reconstruction = [];
+        }
+        
+        // Handle reconstruction scores
+        if (labelData.reconstruction_scores) {
+            if (typeof labelData.reconstruction_scores === 'object') {
+                currentLabels.reconstruction_scores = labelData.reconstruction_scores;
+            } else {
+                try {
+                    currentLabels.reconstruction_scores = JSON.parse(labelData.reconstruction_scores);
+                } catch {
+                    currentLabels.reconstruction_scores = {};
+                }
+            }
+        } else {
+            currentLabels.reconstruction_scores = {};
+        }
+        
+        // Load labeler name
+        if (labelData.labeler_name) {
+            currentLabelerName = labelData.labeler_name;
+            document.getElementById('labelerName').value = currentLabelerName;
+        }
+        
+        // Load notes
+        if (labelData.notes) {
+            currentLabels.notes = labelData.notes;
+            document.getElementById('notesInput').value = currentLabels.notes;
+        } else {
+            currentLabels.notes = '';
+            document.getElementById('notesInput').value = '';
+        }
         
         // Update button states
         updateButtonStates();
     } catch (error) {
         console.error('Error loading label:', error);
         currentLabels.quality = null;
-        currentLabels.reconstruction = null;
+        currentLabels.reconstruction = [];
+        currentLabels.reconstruction_scores = {};
+        currentLabels.notes = '';
+        document.getElementById('notesInput').value = '';
         updateButtonStates();
     }
+    
+    // Reset brightness slider when selecting new image
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    brightnessSlider.value = 100;
+    document.getElementById('brightnessValue').textContent = '100%';
+    mainImage.style.filter = 'brightness(100%)';
 }
 
 // Update button states based on current labels
 function updateButtonStates() {
     // Clear all active states
-    document.querySelectorAll('.label-btn').forEach(btn => {
+    document.querySelectorAll('.label-btn[data-type="quality"]').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    // Set active states
+    // Set quality active state
     if (currentLabels.quality) {
         const btn = document.querySelector(`.label-btn[data-type="quality"][data-value="${currentLabels.quality}"]`);
         if (btn) btn.classList.add('active');
     }
     
-    if (currentLabels.reconstruction) {
-        const btn = document.querySelector(`.label-btn[data-type="reconstruction"][data-value="${currentLabels.reconstruction}"]`);
-        if (btn) btn.classList.add('active');
-    }
+    // Update reconstruction checkboxes
+    document.querySelectorAll('.reconstruction-checkbox').forEach(checkbox => {
+        const value = checkbox.dataset.value;
+        checkbox.checked = currentLabels.reconstruction.includes(value);
+        
+        // Show/hide score input
+        const scoreInput = document.querySelector(`.reconstruction-score[data-recon="${value}"]`);
+        if (scoreInput) {
+            if (checkbox.checked) {
+                scoreInput.style.display = 'inline-block';
+                // Set score value if exists
+                if (currentLabels.reconstruction_scores[value]) {
+                    scoreInput.value = currentLabels.reconstruction_scores[value];
+                }
+            } else {
+                scoreInput.style.display = 'none';
+                scoreInput.value = '';
+            }
+        }
+    });
 }
 
 // Save label
 async function saveLabel() {
     if (!currentImage) {
         alert('Please select an image first');
+        return;
+    }
+    
+    if (!currentLabelerName) {
+        alert('Please enter your name before saving');
         return;
     }
     
@@ -311,7 +447,10 @@ async function saveLabel() {
                 file_path: currentImage.path,
                 file_name: currentImage.name,
                 quality: currentLabels.quality,
-                reconstruction: currentLabels.reconstruction
+                reconstruction: currentLabels.reconstruction.length > 0 ? currentLabels.reconstruction : null,
+                reconstruction_scores: Object.keys(currentLabels.reconstruction_scores).length > 0 ? currentLabels.reconstruction_scores : null,
+                labeler_name: currentLabelerName,
+                notes: currentLabels.notes || null
             })
         });
         
@@ -319,7 +458,8 @@ async function saveLabel() {
             await loadLabels(); // Reload labels to update table and grid
             alert('Label saved successfully!');
         } else {
-            alert('Error saving label');
+            const error = await response.json();
+            alert('Error saving label: ' + (error.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error saving label:', error);
@@ -330,7 +470,10 @@ async function saveLabel() {
 // Clear labels
 function clearLabels() {
     currentLabels.quality = null;
-    currentLabels.reconstruction = null;
+    currentLabels.reconstruction = [];
+    currentLabels.reconstruction_scores = {};
+    currentLabels.notes = '';
+    document.getElementById('notesInput').value = '';
     updateButtonStates();
 }
 
@@ -355,10 +498,44 @@ function renderLabelsTable() {
             deleteLabel(label.file_path);
         };
         
+        // Parse reconstruction (can be array or single value)
+        let reconstructionText = '-';
+        if (label.reconstruction) {
+            try {
+                const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
+                if (Array.isArray(recon)) {
+                    reconstructionText = recon.join(', ');
+                } else {
+                    reconstructionText = recon;
+                }
+            } catch {
+                reconstructionText = label.reconstruction;
+            }
+        }
+        
+        // Parse scores
+        let scoresText = '-';
+        if (label.reconstruction_scores) {
+            try {
+                const scores = typeof label.reconstruction_scores === 'string' ? JSON.parse(label.reconstruction_scores) : label.reconstruction_scores;
+                if (typeof scores === 'object' && scores !== null) {
+                    scoresText = Object.entries(scores).map(([k, v]) => `${k}: ${v}`).join(', ');
+                }
+            } catch {
+                scoresText = '-';
+            }
+        }
+        
+        const notesText = label.notes || '-';
+        const notesDisplay = notesText.length > 50 ? notesText.substring(0, 50) + '...' : notesText;
+        
         row.innerHTML = `
             <td>${label.file_name}</td>
             <td>${label.quality || '-'}</td>
-            <td>${label.reconstruction || '-'}</td>
+            <td>${reconstructionText}</td>
+            <td>${scoresText}</td>
+            <td>${label.labeler_name || '-'}</td>
+            <td title="${notesText !== '-' ? notesText : ''}" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${notesDisplay}</td>
             <td></td>
         `;
         

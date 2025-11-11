@@ -1,9 +1,9 @@
 from flask import Flask, render_template, jsonify, request, send_from_directory, Response
 from flask_cors import CORS
 import os
+import json
 from pathlib import Path
 from datetime import datetime
-import json
 import mimetypes
 
 app = Flask(__name__)
@@ -77,10 +77,20 @@ def init_db():
                 file_name TEXT NOT NULL,
                 quality TEXT,
                 reconstruction TEXT,
+                reconstruction_scores TEXT,
+                labeler_name TEXT,
+                notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Add new columns if they don't exist (for existing databases)
+        try:
+            c.execute('ALTER TABLE labels ADD COLUMN IF NOT EXISTS labeler_name TEXT')
+            c.execute('ALTER TABLE labels ADD COLUMN IF NOT EXISTS reconstruction_scores TEXT')
+            c.execute('ALTER TABLE labels ADD COLUMN IF NOT EXISTS notes TEXT')
+        except:
+            pass  # Columns might already exist
     else:
         c.execute('''
             CREATE TABLE IF NOT EXISTS labels (
@@ -89,10 +99,26 @@ def init_db():
                 file_name TEXT NOT NULL,
                 quality TEXT,
                 reconstruction TEXT,
+                reconstruction_scores TEXT,
+                labeler_name TEXT,
+                notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Add new columns if they don't exist (for existing databases)
+        try:
+            c.execute('ALTER TABLE labels ADD COLUMN labeler_name TEXT')
+        except:
+            pass
+        try:
+            c.execute('ALTER TABLE labels ADD COLUMN reconstruction_scores TEXT')
+        except:
+            pass
+        try:
+            c.execute('ALTER TABLE labels ADD COLUMN notes TEXT')
+        except:
+            pass
     
     conn.commit()
     conn.close()
@@ -357,10 +383,27 @@ def save_label():
     file_path = data.get('file_path')
     file_name = data.get('file_name')
     quality = data.get('quality')
-    reconstruction = data.get('reconstruction')
+    reconstruction = data.get('reconstruction')  # Can be a list or single value
+    reconstruction_scores = data.get('reconstruction_scores')  # Dict mapping reconstruction to score
+    labeler_name = data.get('labeler_name', '').strip()
+    notes = data.get('notes', '').strip()
     
     if not file_path or not file_name:
         return jsonify({'error': 'file_path and file_name are required'}), 400
+    
+    # Convert reconstruction to JSON string if it's a list
+    if isinstance(reconstruction, list):
+        reconstruction_json = json.dumps(reconstruction)
+    elif reconstruction:
+        reconstruction_json = json.dumps([reconstruction])  # Single value as list
+    else:
+        reconstruction_json = None
+    
+    # Convert reconstruction_scores to JSON string
+    if isinstance(reconstruction_scores, dict):
+        scores_json = json.dumps(reconstruction_scores)
+    else:
+        scores_json = None
     
     conn = get_db_connection()
     c = conn.cursor()
@@ -377,27 +420,29 @@ def save_label():
         if USE_POSTGRES:
             c.execute('''
                 UPDATE labels 
-                SET quality = %s, reconstruction = %s, updated_at = CURRENT_TIMESTAMP
+                SET quality = %s, reconstruction = %s, reconstruction_scores = %s, 
+                    labeler_name = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
                 WHERE file_path = %s
-            ''', (quality, reconstruction, file_path))
+            ''', (quality, reconstruction_json, scores_json, labeler_name, notes, file_path))
         else:
             c.execute('''
                 UPDATE labels 
-                SET quality = ?, reconstruction = ?, updated_at = CURRENT_TIMESTAMP
+                SET quality = ?, reconstruction = ?, reconstruction_scores = ?,
+                    labeler_name = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE file_path = ?
-            ''', (quality, reconstruction, file_path))
+            ''', (quality, reconstruction_json, scores_json, labeler_name, notes, file_path))
     else:
         # Insert new label
         if USE_POSTGRES:
             c.execute('''
-                INSERT INTO labels (file_path, file_name, quality, reconstruction)
-                VALUES (%s, %s, %s, %s)
-            ''', (file_path, file_name, quality, reconstruction))
+                INSERT INTO labels (file_path, file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
         else:
             c.execute('''
-                INSERT INTO labels (file_path, file_name, quality, reconstruction)
-                VALUES (?, ?, ?, ?)
-            ''', (file_path, file_name, quality, reconstruction))
+                INSERT INTO labels (file_path, file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
     
     conn.commit()
     conn.close()
@@ -417,18 +462,42 @@ def get_label(file_path):
         c.execute('SELECT * FROM labels WHERE file_path = %s', (file_path,))
         row = c.fetchone()
         if row:
+            label_data = dict(row)
+            # Parse JSON fields
+            if label_data.get('reconstruction'):
+                try:
+                    label_data['reconstruction'] = json.loads(label_data['reconstruction'])
+                except:
+                    pass
+            if label_data.get('reconstruction_scores'):
+                try:
+                    label_data['reconstruction_scores'] = json.loads(label_data['reconstruction_scores'])
+                except:
+                    pass
             conn.close()
-            return jsonify(dict(row))
+            return jsonify(label_data)
     else:
         c = conn.cursor()
         c.execute('SELECT * FROM labels WHERE file_path = ?', (file_path,))
         row = c.fetchone()
         if row:
+            label_data = dict(row)
+            # Parse JSON fields
+            if label_data.get('reconstruction'):
+                try:
+                    label_data['reconstruction'] = json.loads(label_data['reconstruction'])
+                except:
+                    pass
+            if label_data.get('reconstruction_scores'):
+                try:
+                    label_data['reconstruction_scores'] = json.loads(label_data['reconstruction_scores'])
+                except:
+                    pass
             conn.close()
-            return jsonify(dict(row))
+            return jsonify(label_data)
     
     conn.close()
-    return jsonify({'quality': None, 'reconstruction': None})
+    return jsonify({'quality': None, 'reconstruction': None, 'reconstruction_scores': None, 'labeler_name': None, 'notes': None})
 
 @app.route('/api/labels/<path:file_path>', methods=['DELETE'])
 def delete_label(file_path):
@@ -460,22 +529,47 @@ def export_labels():
     
     if USE_POSTGRES:
         c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute('SELECT file_name, quality, reconstruction FROM labels ORDER BY file_name')
+        c.execute('SELECT file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes FROM labels ORDER BY file_name')
         labels = [dict(row) for row in c.fetchall()]
     else:
         c = conn.cursor()
-        c.execute('SELECT file_name, quality, reconstruction FROM labels ORDER BY file_name')
+        c.execute('SELECT file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes FROM labels ORDER BY file_name')
         labels = [dict(row) for row in c.fetchall()]
     
     conn.close()
     
     # Generate CSV
-    csv_lines = ['File,Quality,Label']
+    csv_lines = ['File,Quality,Reconstruction,Reconstruction_Scores,Labeler_Name,Notes']
     for label in labels:
         file_name = label['file_name']
-        quality = label['quality'] or '-'
-        reconstruction = label['reconstruction'] or '-'
-        csv_lines.append(f'{file_name},{quality},{reconstruction}')
+        quality = label.get('quality') or '-'
+        
+        # Parse reconstruction (can be JSON list or single value)
+        reconstruction = label.get('reconstruction') or '-'
+        if reconstruction and reconstruction != '-':
+            try:
+                recon_list = json.loads(reconstruction) if isinstance(reconstruction, str) else reconstruction
+                if isinstance(recon_list, list):
+                    reconstruction = '; '.join(recon_list)
+            except:
+                pass
+        
+        # Parse reconstruction scores
+        scores = label.get('reconstruction_scores') or '-'
+        if scores and scores != '-':
+            try:
+                scores_dict = json.loads(scores) if isinstance(scores, str) else scores
+                if isinstance(scores_dict, dict):
+                    scores = '; '.join([f"{k}: {v}" for k, v in scores_dict.items()])
+            except:
+                pass
+        
+        labeler_name = label.get('labeler_name') or '-'
+        notes = label.get('notes') or '-'
+        # Escape quotes in notes for CSV
+        notes_escaped = notes.replace('"', '""') if notes != '-' else '-'
+        
+        csv_lines.append(f'{file_name},{quality},"{reconstruction}","{scores}",{labeler_name},"{notes_escaped}"')
     
     return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv'}
 
