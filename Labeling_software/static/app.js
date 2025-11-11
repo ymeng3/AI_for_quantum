@@ -1018,7 +1018,7 @@ function clearPairwiseComparison() {
         btn.style.borderColor = '#ddd';
         btn.style.color = '#333';
     });
-}
+    
     // Reset brightness sliders
     document.querySelectorAll('.brightness-slider-pairwise').forEach(slider => {
         slider.value = 100;
