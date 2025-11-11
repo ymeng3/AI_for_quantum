@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import mimetypes
 
 app = Flask(__name__)
@@ -324,8 +324,9 @@ def serve_image(image_path):
                 image_data = f.read()
             
             response = Response(image_data, mimetype=mime_type)
-            # Add cache control headers
-            response.headers['Cache-Control'] = 'public, max-age=3600'
+            # Add aggressive cache control headers for better performance
+            response.headers['Cache-Control'] = 'public, max-age=86400, immutable'  # Cache for 1 day
+            response.headers['Expires'] = (datetime.now() + timedelta(days=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
             return response
         else:
             return "No image source configured", 404
@@ -382,7 +383,9 @@ def serve_google_drive_image(image_path):
                         yield chunk
             
             flask_response = Response(generate(), mimetype=mime_type)
-            flask_response.headers['Cache-Control'] = 'public, max-age=3600'
+            # Add aggressive cache control headers for Google Drive images
+            flask_response.headers['Cache-Control'] = 'public, max-age=86400, immutable'  # Cache for 1 day
+            flask_response.headers['Expires'] = (datetime.now() + timedelta(days=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
             return flask_response
         else:
             return f"Failed to fetch image from Google Drive: {response.status_code}", 404

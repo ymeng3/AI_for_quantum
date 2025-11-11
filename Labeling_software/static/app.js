@@ -10,7 +10,7 @@ let currentLabels = {
 let currentLabelerName = '';
 // Pagination state
 let currentPage = 1;
-const imagesPerPage = 100; // Show 100 images per page
+const imagesPerPage = 50; // Reduced from 100 to 50 for better performance
 
 // Pairwise comparison state
 let currentMode = 'absolute'; // 'absolute' or 'pairwise'
@@ -228,44 +228,53 @@ function renderImageGrid(filter = 'all') {
         item.className = 'image-item';
         item.dataset.path = img.path;
         
+        // Add loading placeholder
+        const loadingPlaceholder = document.createElement('div');
+        loadingPlaceholder.className = 'image-loading-placeholder';
+        loadingPlaceholder.innerHTML = '<div class="loading-spinner"></div>';
+        item.appendChild(loadingPlaceholder);
+        
         const imgEl = document.createElement('img');
         // Properly encode the path - split by / and encode each segment
         const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
         const imageUrl = `/api/images/${encodedPath}`;
-        imgEl.src = imageUrl;
         imgEl.alt = img.name;
-        imgEl.loading = 'lazy';
         imgEl.style.width = '100%';
         imgEl.style.height = '100%';
         imgEl.style.objectFit = 'contain';
+        imgEl.style.display = 'none'; // Hide until loaded
+        
+        // Use data-src for lazy loading with Intersection Observer
+        imgEl.dataset.src = imageUrl;
+        
         imgEl.onerror = function() {
             console.error('Failed to load image:', img.path, 'URL:', imageUrl);
-            this.style.border = '2px solid red';
-            this.alt = 'Failed to load: ' + img.name;
-            // Show error text
-            const errorDiv = document.createElement('div');
-            errorDiv.textContent = 'Error';
-            errorDiv.style.color = 'red';
-            errorDiv.style.fontSize = '10px';
-            errorDiv.style.position = 'absolute';
-            errorDiv.style.top = '50%';
-            errorDiv.style.left = '50%';
-            errorDiv.style.transform = 'translate(-50%, -50%)';
-            item.appendChild(errorDiv);
+            loadingPlaceholder.innerHTML = '<div style="color: red; font-size: 10px;">Error</div>';
+            this.style.display = 'none';
         };
+        
         imgEl.onload = function() {
-            console.log('Successfully loaded image:', img.name);
+            // Hide placeholder and show image
+            loadingPlaceholder.style.display = 'none';
+            this.style.display = 'block';
         };
         
         const badge = document.createElement('div');
         badge.className = 'status-badge';
         const label = labels[img.path];
-        if (label && label.quality && label.reconstruction) {
-            badge.textContent = '✓';
-            badge.classList.add('labeled');
-        } else if (label && (label.quality || label.reconstruction)) {
-            badge.textContent = '~';
-            badge.classList.add('partial');
+        if (label && label.reconstruction) {
+            try {
+                const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
+                if (Array.isArray(recon) && recon.length > 0) {
+                    badge.textContent = '✓';
+                    badge.classList.add('labeled');
+                } else if (recon) {
+                    badge.textContent = '✓';
+                    badge.classList.add('labeled');
+                }
+            } catch {
+                // Ignore parse errors
+            }
         }
         
         item.appendChild(imgEl);
@@ -275,6 +284,29 @@ function renderImageGrid(filter = 'all') {
         
         item.addEventListener('click', () => selectImage(img));
         grid.appendChild(item);
+        
+        // Use Intersection Observer for lazy loading
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.removeAttribute('data-src');
+                        }
+                        observer.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '50px' // Start loading 50px before image enters viewport
+            });
+            
+            observer.observe(imgEl);
+        } else {
+            // Fallback: load immediately if IntersectionObserver not supported
+            imgEl.src = imageUrl;
+        }
     });
 }
 
