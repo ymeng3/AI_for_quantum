@@ -181,6 +181,11 @@ function renderImageGrid(filter = 'all') {
     const grid = document.getElementById('imageGrid');
     grid.innerHTML = '';
     
+    // Disconnect previous observer if it exists (cleanup)
+    if (window.imageObserver) {
+        window.imageObserver.disconnect();
+    }
+    
     let filteredImages = images;
     if (filter === 'labeled') {
         filteredImages = images.filter(img => {
@@ -287,27 +292,43 @@ function renderImageGrid(filter = 'all') {
         
         // Use Intersection Observer for lazy loading
         if ('IntersectionObserver' in window) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        if (img.dataset.src) {
-                            img.src = img.dataset.src;
-                            img.removeAttribute('data-src');
+            // Create a single observer instance for all images (more efficient)
+            if (!window.imageObserver) {
+                window.imageObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            if (img.dataset.src) {
+                                img.src = img.dataset.src;
+                                img.removeAttribute('data-src');
+                            }
+                            window.imageObserver.unobserve(img);
                         }
-                        observer.unobserve(img);
-                    }
+                    });
+                }, {
+                    rootMargin: '100px' // Start loading 100px before image enters viewport
                 });
-            }, {
-                rootMargin: '50px' // Start loading 50px before image enters viewport
-            });
+            }
             
-            observer.observe(imgEl);
+            window.imageObserver.observe(imgEl);
         } else {
             // Fallback: load immediately if IntersectionObserver not supported
             imgEl.src = imageUrl;
         }
     });
+    
+    // Force load first few images immediately for better UX
+    const firstImages = grid.querySelectorAll('.image-item img[data-src]');
+    const imagesToLoadImmediately = Math.min(9, firstImages.length); // Load first 9 (3x3 grid)
+    for (let i = 0; i < imagesToLoadImmediately; i++) {
+        if (firstImages[i] && firstImages[i].dataset.src) {
+            firstImages[i].src = firstImages[i].dataset.src;
+            firstImages[i].removeAttribute('data-src');
+            if (window.imageObserver) {
+                window.imageObserver.unobserve(firstImages[i]);
+            }
+        }
+    }
 }
 
 // Filter images
