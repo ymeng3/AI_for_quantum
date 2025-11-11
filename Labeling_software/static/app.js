@@ -913,7 +913,7 @@ async function savePairwiseComparison(loadNext = false) {
             if (!response.ok) {
                 try {
                     const errorData = await response.json();
-                    errors.push(`Reconstruction "${comparisons[i]}": ${errorData.get('error', 'Unknown error')}`);
+                    errors.push(`Reconstruction "${comparisons[i]}": ${errorData.error || 'Unknown error'}`);
                 } catch (e) {
                     errors.push(`Reconstruction "${comparisons[i]}": HTTP ${response.status}`);
                 }
