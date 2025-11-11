@@ -33,28 +33,45 @@ def get_all_images_from_drive(folder_id, api_key=None):
         def get_files_recursive(folder_id, parent_path=''):
             files = []
             query = f"'{folder_id}' in parents and trashed=false"
-            results = service.files().list(q=query, fields="files(id, name, mimeType)").execute()
-            items = results.get('files', [])
+            page_token = None
             
-            for item in items:
-                mime_type = item.get('mimeType', '')
+            # Handle pagination - Google Drive API returns max 100 items per page
+            while True:
+                request_params = {
+                    'q': query,
+                    'fields': 'nextPageToken, files(id, name, mimeType)',
+                    'pageSize': 1000  # Maximum allowed by API
+                }
+                if page_token:
+                    request_params['pageToken'] = page_token
                 
-                if 'image' in mime_type.lower():
-                    # It's an image file
-                    ext = Path(item['name']).suffix.lower()
-                    if ext in image_extensions:
-                        rel_path = f"{parent_path}/{item['name']}" if parent_path else item['name']
-                        files.append({
-                            'path': rel_path,
-                            'name': item['name'],
-                            'file_id': item['id'],
-                            'mime_type': mime_type
-                        })
-                elif mime_type == 'application/vnd.google-apps.folder':
-                    # It's a folder, recurse
-                    folder_path = f"{parent_path}/{item['name']}" if parent_path else item['name']
-                    subfolder_files = get_files_recursive(item['id'], folder_path)
-                    files.extend(subfolder_files)
+                results = service.files().list(**request_params).execute()
+                items = results.get('files', [])
+                
+                for item in items:
+                    mime_type = item.get('mimeType', '')
+                    
+                    if 'image' in mime_type.lower():
+                        # It's an image file
+                        ext = Path(item['name']).suffix.lower()
+                        if ext in image_extensions:
+                            rel_path = f"{parent_path}/{item['name']}" if parent_path else item['name']
+                            files.append({
+                                'path': rel_path,
+                                'name': item['name'],
+                                'file_id': item['id'],
+                                'mime_type': mime_type
+                            })
+                    elif mime_type == 'application/vnd.google-apps.folder':
+                        # It's a folder, recurse
+                        folder_path = f"{parent_path}/{item['name']}" if parent_path else item['name']
+                        subfolder_files = get_files_recursive(item['id'], folder_path)
+                        files.extend(subfolder_files)
+                
+                # Check if there are more pages
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
             
             return files
         
