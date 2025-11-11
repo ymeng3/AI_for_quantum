@@ -178,6 +178,20 @@ async function loadLabels() {
     }
 }
 
+// Global state for pairwise comparisons
+let pairwiseComparisonsList = [];
+
+// Load pairwise comparisons from API
+async function loadPairwiseComparisons() {
+    try {
+        const response = await fetch('/api/pairwise');
+        pairwiseComparisonsList = await response.json();
+        renderPairwiseTable();
+    } catch (error) {
+        console.error('Error loading pairwise comparisons:', error);
+    }
+}
+
 // Render image grid
 function renderImageGrid(filter = 'all') {
     const grid = document.getElementById('imageGrid');
