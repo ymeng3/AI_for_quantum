@@ -431,75 +431,99 @@ def get_labels():
 @app.route('/api/labels', methods=['POST'])
 def save_label():
     """Save or update a label"""
-    data = request.json
-    file_path = data.get('file_path')
-    file_name = data.get('file_name')
-    quality = data.get('quality')
-    reconstruction = data.get('reconstruction')  # Can be a list or single value
-    reconstruction_scores = data.get('reconstruction_scores')  # Dict mapping reconstruction to score
-    labeler_name = data.get('labeler_name', '').strip()
-    notes = data.get('notes', '').strip()
-    
-    if not file_path or not file_name:
-        return jsonify({'error': 'file_path and file_name are required'}), 400
-    
-    # Convert reconstruction to JSON string if it's a list
-    if isinstance(reconstruction, list):
-        reconstruction_json = json.dumps(reconstruction)
-    elif reconstruction:
-        reconstruction_json = json.dumps([reconstruction])  # Single value as list
-    else:
-        reconstruction_json = None
-    
-    # Convert reconstruction_scores to JSON string
-    if isinstance(reconstruction_scores, dict):
-        scores_json = json.dumps(reconstruction_scores)
-    else:
-        scores_json = None
-    
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    # Check if label exists
-    if USE_POSTGRES:
-        c.execute('SELECT id FROM labels WHERE file_path = %s', (file_path,))
-    else:
-        c.execute('SELECT id FROM labels WHERE file_path = ?', (file_path,))
-    existing = c.fetchone()
-    
-    if existing:
-        # Update existing label
-        if USE_POSTGRES:
-            c.execute('''
-                UPDATE labels 
-                SET quality = %s, reconstruction = %s, reconstruction_scores = %s, 
-                    labeler_name = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE file_path = %s
-            ''', (quality, reconstruction_json, scores_json, labeler_name, notes, file_path))
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        file_path = data.get('file_path')
+        file_name = data.get('file_name')
+        quality = data.get('quality')
+        reconstruction = data.get('reconstruction')  # Can be a list or single value
+        reconstruction_scores = data.get('reconstruction_scores')  # Dict mapping reconstruction to score
+        labeler_name = data.get('labeler_name', '').strip()
+        notes = data.get('notes', '').strip() if data.get('notes') else ''
+        
+        if not file_path or not file_name:
+            return jsonify({'error': 'file_path and file_name are required'}), 400
+        
+        # Convert reconstruction to JSON string if it's a list
+        if isinstance(reconstruction, list):
+            reconstruction_json = json.dumps(reconstruction)
+        elif reconstruction:
+            reconstruction_json = json.dumps([reconstruction])  # Single value as list
         else:
-            c.execute('''
-                UPDATE labels 
-                SET quality = ?, reconstruction = ?, reconstruction_scores = ?,
-                    labeler_name = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE file_path = ?
-            ''', (quality, reconstruction_json, scores_json, labeler_name, notes, file_path))
-    else:
-        # Insert new label
-        if USE_POSTGRES:
-            c.execute('''
-                INSERT INTO labels (file_path, file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
+            reconstruction_json = None
+        
+        # Convert reconstruction_scores to JSON string
+        if isinstance(reconstruction_scores, dict):
+            scores_json = json.dumps(reconstruction_scores)
+        elif reconstruction_scores:
+            # Try to convert if it's a string
+            try:
+                if isinstance(reconstruction_scores, str):
+                    scores_json = reconstruction_scores
+                else:
+                    scores_json = json.dumps(reconstruction_scores)
+            except:
+                scores_json = None
         else:
-            c.execute('''
-                INSERT INTO labels (file_path, file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'success': True})
+            scores_json = None
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        try:
+            # Check if label exists
+            if USE_POSTGRES:
+                c.execute('SELECT id FROM labels WHERE file_path = %s', (file_path,))
+            else:
+                c.execute('SELECT id FROM labels WHERE file_path = ?', (file_path,))
+            existing = c.fetchone()
+            
+            if existing:
+                # Update existing label
+                if USE_POSTGRES:
+                    c.execute('''
+                        UPDATE labels 
+                        SET quality = %s, reconstruction = %s, reconstruction_scores = %s, 
+                            labeler_name = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE file_path = %s
+                    ''', (quality, reconstruction_json, scores_json, labeler_name, notes, file_path))
+                else:
+                    c.execute('''
+                        UPDATE labels 
+                        SET quality = ?, reconstruction = ?, reconstruction_scores = ?,
+                            labeler_name = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE file_path = ?
+                    ''', (quality, reconstruction_json, scores_json, labeler_name, notes, file_path))
+            else:
+                # Insert new label
+                if USE_POSTGRES:
+                    c.execute('''
+                        INSERT INTO labels (file_path, file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
+                else:
+                    c.execute('''
+                        INSERT INTO labels (file_path, file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
+            
+            conn.commit()
+            return jsonify({'success': True})
+        except Exception as db_error:
+            conn.rollback()
+            import traceback
+            error_msg = str(db_error)
+            print(f"Database error in save_label: {error_msg}\n{traceback.format_exc()}")
+            return jsonify({'error': f'Database error: {error_msg}'}), 500
+        finally:
+            conn.close()
+    except Exception as e:
+        import traceback
+        print(f"Error in save_label: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/labels/<path:file_path>', methods=['GET'])
 def get_label(file_path):
