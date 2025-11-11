@@ -877,6 +877,10 @@ function setPairwiseImage(slot, img, itemElement) {
             const slider = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
             const brightness = slider ? parseInt(slider.value) : 100;
             this.style.filter = `brightness(${brightness}%)`;
+            // Ensure consistent sizing
+            this.style.width = '100%';
+            this.style.height = '100%';
+            this.style.objectFit = 'contain';
         };
         document.getElementById('pairwiseImage1Info').textContent = img.name;
     } else {
@@ -888,6 +892,10 @@ function setPairwiseImage(slot, img, itemElement) {
             const slider = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
             const brightness = slider ? parseInt(slider.value) : 100;
             this.style.filter = `brightness(${brightness}%)`;
+            // Ensure consistent sizing
+            this.style.width = '100%';
+            this.style.height = '100%';
+            this.style.objectFit = 'contain';
         };
         document.getElementById('pairwiseImage2Info').textContent = img.name;
     }
@@ -932,6 +940,20 @@ function loadRandomPair() {
     
     setPairwiseImage(1, images[idx1], item1);
     setPairwiseImage(2, images[idx2], item2);
+    
+    // Force resize to ensure both images are same size
+    setTimeout(() => {
+        const img1 = document.getElementById('pairwiseImage1');
+        const img2 = document.getElementById('pairwiseImage2');
+        if (img1 && img2) {
+            img1.style.width = '100%';
+            img1.style.height = '100%';
+            img1.style.objectFit = 'contain';
+            img2.style.width = '100%';
+            img2.style.height = '100%';
+            img2.style.objectFit = 'contain';
+        }
+    }, 100);
 }
 
 // Save pairwise comparison

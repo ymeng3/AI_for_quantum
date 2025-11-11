@@ -123,9 +123,9 @@
             <div id="pairwiseMode" class="labeling-mode" style="display: none;">
                 <!-- Pairwise Image Display -->
                 <div class="pairwise-images" style="display: flex; gap: 15px; padding: 20px; background-color: #f8f9fa;">
-                    <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                        <div style="width: 100%; aspect-ratio: 1; background-color: #000; display: flex; align-items: center; justify-content: center; border: 3px solid #4a90e2; border-radius: 8px; margin-bottom: 10px;">
-                            <img id="pairwiseImage1" src="" alt="Image 1" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0;">
+                        <div class="pairwise-image-wrapper" style="width: 100%; aspect-ratio: 1; background-color: #000; display: flex; align-items: center; justify-content: center; border: 3px solid #4a90e2; border-radius: 8px; margin-bottom: 10px; position: relative; overflow: hidden;">
+                            <img id="pairwiseImage1" src="" alt="Image 1" style="width: 100%; height: 100%; object-fit: contain; display: block;">
                         </div>
                         <div class="image-info" id="pairwiseImage1Info" style="font-size: 12px; color: #666; text-align: center; margin-bottom: 10px;">Image 1</div>
                         <div class="brightness-control-pairwise" style="width: 100%; padding: 8px; background-color: white; border-radius: 4px; margin-bottom: 10px;">
@@ -141,9 +141,9 @@
                         <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 20px;">VS</div>
                     </div>
                     
-                    <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                        <div style="width: 100%; aspect-ratio: 1; background-color: #000; display: flex; align-items: center; justify-content: center; border: 3px solid #4a90e2; border-radius: 8px; margin-bottom: 10px;">
-                            <img id="pairwiseImage2" src="" alt="Image 2" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    <div class="pairwise-image-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0;">
+                        <div class="pairwise-image-wrapper" style="width: 100%; aspect-ratio: 1; background-color: #000; display: flex; align-items: center; justify-content: center; border: 3px solid #4a90e2; border-radius: 8px; margin-bottom: 10px; position: relative; overflow: hidden;">
+                            <img id="pairwiseImage2" src="" alt="Image 2" style="width: 100%; height: 100%; object-fit: contain; display: block;">
                         </div>
                         <div class="image-info" id="pairwiseImage2Info" style="font-size: 12px; color: #666; text-align: center; margin-bottom: 10px;">Image 2</div>
                         <div class="brightness-control-pairwise" style="width: 100%; padding: 8px; background-color: white; border-radius: 4px; margin-bottom: 10px;">
