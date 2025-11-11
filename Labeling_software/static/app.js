@@ -306,10 +306,13 @@ function renderImageGrid(filter = 'all') {
                         }
                     });
                 }, {
-                    rootMargin: '100px' // Start loading 100px before image enters viewport
+                    root: null, // Use viewport as root
+                    rootMargin: '200px', // Start loading 200px before image enters viewport
+                    threshold: 0.01 // Trigger when 1% of image is visible
                 });
             }
             
+            // Observe the image element
             window.imageObserver.observe(imgEl);
         } else {
             // Fallback: load immediately if IntersectionObserver not supported
@@ -318,17 +321,28 @@ function renderImageGrid(filter = 'all') {
     });
     
     // Force load first few images immediately for better UX
-    const firstImages = grid.querySelectorAll('.image-item img[data-src]');
-    const imagesToLoadImmediately = Math.min(9, firstImages.length); // Load first 9 (3x3 grid)
-    for (let i = 0; i < imagesToLoadImmediately; i++) {
-        if (firstImages[i] && firstImages[i].dataset.src) {
-            firstImages[i].src = firstImages[i].dataset.src;
-            firstImages[i].removeAttribute('data-src');
-            if (window.imageObserver) {
-                window.imageObserver.unobserve(firstImages[i]);
+    setTimeout(() => {
+        const firstImages = grid.querySelectorAll('.image-item img[data-src]');
+        const imagesToLoadImmediately = Math.min(9, firstImages.length); // Load first 9 (3x3 grid)
+        for (let i = 0; i < imagesToLoadImmediately; i++) {
+            if (firstImages[i] && firstImages[i].dataset.src) {
+                firstImages[i].src = firstImages[i].dataset.src;
+                firstImages[i].removeAttribute('data-src');
+                if (window.imageObserver) {
+                    window.imageObserver.unobserve(firstImages[i]);
+                }
             }
         }
-    }
+        
+        // After loading first 9, trigger observer check for visible images
+        if (window.imageObserver) {
+            // Force a check by observing all remaining images
+            const remainingImages = grid.querySelectorAll('.image-item img[data-src]');
+            remainingImages.forEach(img => {
+                window.imageObserver.observe(img);
+            });
+        }
+    }, 100); // Small delay to ensure DOM is ready
 }
 
 // Filter images
