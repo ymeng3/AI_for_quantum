@@ -311,7 +311,16 @@ function renderImageGrid(filter = 'all') {
             item.appendChild(badge);
         }
         
-        item.addEventListener('click', () => selectImage(img));
+        // Handle click based on current mode
+        item.addEventListener('click', () => {
+            if (currentMode === 'pairwise') {
+                // In pairwise mode, allow selecting images for comparison
+                selectImageForPairwise(img, item);
+            } else {
+                // In absolute mode, select image for labeling
+                selectImage(img);
+            }
+        });
         grid.appendChild(item);
         
         // Use Intersection Observer for lazy loading
@@ -581,12 +590,19 @@ async function saveLabel() {
             await loadLabels(); // Reload labels to update table and grid
             alert('Label saved successfully!');
         } else {
-            const error = await response.json();
-            alert('Error saving label: ' + (error.error || 'Unknown error'));
+            let errorMessage = 'Unknown error';
+            try {
+                const error = await response.json();
+                errorMessage = error.error || error.message || 'Unknown error';
+            } catch (e) {
+                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            console.error('Error saving label:', errorMessage);
+            alert('Error saving label: ' + errorMessage);
         }
     } catch (error) {
         console.error('Error saving label:', error);
-        alert('Error saving label');
+        alert('Error saving label: ' + (error.message || 'Network error'));
     }
 }
 
@@ -745,6 +761,21 @@ async function exportLabels() {
 function switchMode(mode) {
     currentMode = mode;
     
+    // Update image grid click behavior and visual indicators
+    if (mode === 'pairwise') {
+        // Clear any absolute mode selections
+        document.querySelectorAll('.image-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        // Update pairwise indicators
+        updatePairwiseImageIndicators();
+    } else {
+        // Clear pairwise indicators
+        document.querySelectorAll('.image-item').forEach(item => {
+            item.classList.remove('pairwise-selected-1', 'pairwise-selected-2');
+        });
+    }
+    
     // Update button states
     document.getElementById('absoluteModeBtn').classList.toggle('active', mode === 'absolute');
     document.getElementById('pairwiseModeBtn').classList.toggle('active', mode === 'pairwise');
@@ -809,13 +840,79 @@ function initializePairwiseMode() {
     // Pairwise save button
     document.getElementById('pairwiseSaveBtn').addEventListener('click', savePairwiseComparison);
     
-    // Pairwise next button
-    document.getElementById('pairwiseNextBtn').addEventListener('click', () => {
-        savePairwiseComparison(true); // Save and load next
+    // Pairwise random pair button
+    document.getElementById('pairwiseRandomBtn').addEventListener('click', () => {
+        loadRandomPair();
     });
     
     // Pairwise clear button
     document.getElementById('pairwiseClearBtn').addEventListener('click', clearPairwiseComparison);
+}
+
+// Select image for pairwise comparison (manual selection)
+function selectImageForPairwise(img, itemElement) {
+    // Determine which image slot to fill (Image 1 or Image 2)
+    // If Image 1 is empty, fill it; otherwise fill Image 2
+    // If both are filled, replace Image 1
+    if (!pairwiseImage1) {
+        setPairwiseImage(1, img, itemElement);
+    } else if (!pairwiseImage2) {
+        setPairwiseImage(2, img, itemElement);
+    } else {
+        // Both filled - ask user which to replace or replace Image 1 by default
+        if (confirm('Both images are set. Replace Image 1? (Cancel to replace Image 2)')) {
+            setPairwiseImage(1, img, itemElement);
+        } else {
+            setPairwiseImage(2, img, itemElement);
+        }
+    }
+}
+
+// Set a pairwise image in a specific slot
+function setPairwiseImage(slot, img, itemElement) {
+    if (slot === 1) {
+        pairwiseImage1 = img;
+        const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+        const imgEl = document.getElementById('pairwiseImage1');
+        imgEl.src = `/api/images/${encodedPath}`;
+        imgEl.onload = function() {
+            const slider = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
+            const brightness = slider ? parseInt(slider.value) : 100;
+            this.style.filter = `brightness(${brightness}%)`;
+        };
+        document.getElementById('pairwiseImage1Info').textContent = img.name;
+    } else {
+        pairwiseImage2 = img;
+        const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+        const imgEl = document.getElementById('pairwiseImage2');
+        imgEl.src = `/api/images/${encodedPath}`;
+        imgEl.onload = function() {
+            const slider = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
+            const brightness = slider ? parseInt(slider.value) : 100;
+            this.style.filter = `brightness(${brightness}%)`;
+        };
+        document.getElementById('pairwiseImage2Info').textContent = img.name;
+    }
+    
+    // Update visual indicators in grid
+    updatePairwiseImageIndicators();
+    
+    // Clear comparisons when images change
+    clearPairwiseComparison();
+}
+
+// Update visual indicators for which images are selected for pairwise
+function updatePairwiseImageIndicators() {
+    document.querySelectorAll('.image-item').forEach(item => {
+        item.classList.remove('pairwise-selected-1', 'pairwise-selected-2');
+        const path = item.dataset.path;
+        if (pairwiseImage1 && path === pairwiseImage1.path) {
+            item.classList.add('pairwise-selected-1');
+        }
+        if (pairwiseImage2 && path === pairwiseImage2.path) {
+            item.classList.add('pairwise-selected-2');
+        }
+    });
 }
 
 // Load a random pair of images for comparison
@@ -832,36 +929,11 @@ function loadRandomPair() {
         idx2 = Math.floor(Math.random() * images.length);
     }
     
-    pairwiseImage1 = images[idx1];
-    pairwiseImage2 = images[idx2];
+    const item1 = document.querySelector(`.image-item[data-path="${images[idx1].path}"]`);
+    const item2 = document.querySelector(`.image-item[data-path="${images[idx2].path}"]`);
     
-    // Load images
-    const encodedPath1 = pairwiseImage1.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
-    const encodedPath2 = pairwiseImage2.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
-    
-    const img1 = document.getElementById('pairwiseImage1');
-    const img2 = document.getElementById('pairwiseImage2');
-    
-    img1.src = `/api/images/${encodedPath1}`;
-    img2.src = `/api/images/${encodedPath2}`;
-    
-    img1.onload = function() {
-        const slider = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
-        const brightness = slider ? parseInt(slider.value) : 100;
-        this.style.filter = `brightness(${brightness}%)`;
-    };
-    
-    img2.onload = function() {
-        const slider = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
-        const brightness = slider ? parseInt(slider.value) : 100;
-        this.style.filter = `brightness(${brightness}%)`;
-    };
-    
-    document.getElementById('pairwiseImage1Info').textContent = pairwiseImage1.name;
-    document.getElementById('pairwiseImage2Info').textContent = pairwiseImage2.name;
-    
-    // Clear previous comparisons
-    clearPairwiseComparison();
+    setPairwiseImage(1, images[idx1], item1);
+    setPairwiseImage(2, images[idx2], item2);
 }
 
 // Save pairwise comparison
@@ -924,11 +996,7 @@ async function savePairwiseComparison(loadNext = false) {
             // Reload pairwise comparisons to update table
             await loadPairwiseComparisons();
             
-            if (loadNext) {
-                loadRandomPair();
-            } else {
-                alert('Comparison saved successfully!');
-            }
+            alert('Comparison saved successfully!');
         } else {
             console.error('Errors saving comparisons:', errors);
             alert('Error saving some comparisons:\n' + errors.join('\n'));
@@ -939,10 +1007,20 @@ async function savePairwiseComparison(loadNext = false) {
     }
 }
 
-// Clear pairwise comparison
+// Clear pairwise comparison (but keep images)
 function clearPairwiseComparison() {
     pairwiseComparisons = {};
     pairwiseNotes = '';
+    document.getElementById('pairwiseNotesInput').value = '';
+    
+    // Clear button selections
+    document.querySelectorAll('.pairwise-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = 'white';
+        btn.style.borderColor = '#ddd';
+        btn.style.color = '#333';
+    });
+}
     document.getElementById('pairwiseNotesInput').value = '';
     
     // Reset all pairwise buttons
