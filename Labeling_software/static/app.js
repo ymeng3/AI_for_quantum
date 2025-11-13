@@ -127,6 +127,9 @@ function setupEventListeners() {
     // Save button
     document.getElementById('saveBtn').addEventListener('click', saveLabel);
     
+    // Random image button (absolute scoring mode)
+    document.getElementById('randomBtn').addEventListener('click', selectRandomImage);
+    
     // Clear button
     document.getElementById('clearBtn').addEventListener('click', clearLabels);
     
@@ -604,6 +607,24 @@ async function saveLabel() {
         console.error('Error saving label:', error);
         alert('Error saving label: ' + (error.message || 'Network error'));
     }
+}
+
+// Select a random image for absolute scoring mode
+function selectRandomImage() {
+    if (images.length === 0) {
+        alert('No images available');
+        return;
+    }
+    
+    // Select a random image
+    const randomIndex = Math.floor(Math.random() * images.length);
+    const randomImage = images[randomIndex];
+    
+    // Select the image (this will load it in the main display)
+    selectImage(randomImage);
+    
+    // Scroll to top to see the selected image
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Clear labels
