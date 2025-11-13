@@ -1216,3 +1216,101 @@ async function deletePairwiseComparison(compId, image1, image2, recon) {
     }
 }
 
+// Setup collapse/expand functionality for sections
+function setupCollapseButtons() {
+    // Add click handlers to collapse buttons
+    document.querySelectorAll('.collapse-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent header click from triggering
+            const sectionName = btn.dataset.section;
+            toggleSection(sectionName);
+        });
+    });
+    
+    // Also allow clicking on header to toggle (but not on mode selector or other buttons)
+    document.querySelectorAll('.section-header').forEach(header => {
+        header.addEventListener('click', (e) => {
+            // Only toggle if clicking on the header itself, not on buttons or other interactive elements
+            if (e.target.closest('.mode-selector') || 
+                e.target.closest('.collapse-btn') || 
+                e.target.closest('.filter-controls') ||
+                e.target.closest('.export-btn') ||
+                e.target.closest('button') ||
+                e.target.closest('input') ||
+                e.target.closest('select')) {
+                return;
+            }
+            
+            const section = header.closest('.section');
+            const sectionName = section.querySelector('.collapse-btn')?.dataset.section;
+            if (sectionName) {
+                toggleSection(sectionName);
+            }
+        });
+    });
+}
+
+// Toggle section collapse state
+function toggleSection(sectionName) {
+    // Map section names to class selectors
+    const sectionMap = {
+        'labeling': '.labeling-section',
+        'imageBank': '.image-grid-section',
+        'labels': '.database-section'
+    };
+    
+    const selector = sectionMap[sectionName];
+    if (!selector) return;
+    
+    const section = document.querySelector(selector);
+    if (!section) return;
+    
+    const isCollapsed = section.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        section.classList.remove('collapsed');
+        saveCollapsedState(sectionName, false);
+    } else {
+        section.classList.add('collapsed');
+        saveCollapsedState(sectionName, true);
+    }
+}
+
+// Save collapsed state to localStorage
+function saveCollapsedState(sectionName, isCollapsed) {
+    try {
+        const state = JSON.parse(localStorage.getItem('sectionCollapsedState') || '{}');
+        state[sectionName] = isCollapsed;
+        localStorage.setItem('sectionCollapsedState', JSON.stringify(state));
+    } catch (e) {
+        console.error('Error saving collapsed state:', e);
+    }
+}
+
+// Load collapsed state from localStorage
+function loadCollapsedState() {
+    try {
+        const state = JSON.parse(localStorage.getItem('sectionCollapsedState') || '{}');
+        
+        const sectionMap = {
+            'labeling': '.labeling-section',
+            'imageBank': '.image-grid-section',
+            'labels': '.database-section'
+        };
+        
+        Object.keys(state).forEach(sectionName => {
+            if (state[sectionName]) {
+                const selector = sectionMap[sectionName];
+                if (selector) {
+                    const section = document.querySelector(selector);
+                    if (section) {
+                        section.classList.add('collapsed');
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Error loading collapsed state:', e);
+    }
+}
+
