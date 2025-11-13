@@ -14,13 +14,19 @@
         <!-- Left Section: Single Image Labeling -->
         <div class="section labeling-section">
             <div class="section-header">
-                <h2>Image Labeling</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="collapse-btn" data-section="labeling" title="Collapse/Expand section">
+                        <span class="collapse-icon">▼</span>
+                    </button>
+                    <h2>Image Labeling</h2>
+                </div>
                 <div class="mode-selector" style="display: flex; gap: 10px; align-items: center;">
                     <label style="font-size: 13px; color: #666;">Mode:</label>
                     <button id="absoluteModeBtn" class="mode-btn active" data-mode="absolute">Absolute Scoring</button>
                     <button id="pairwiseModeBtn" class="mode-btn" data-mode="pairwise">Pairwise Comparison</button>
                 </div>
             </div>
+            <div class="section-content" data-section="labeling">
             
             <!-- Absolute Scoring Mode -->
             <div id="absoluteMode" class="labeling-mode">
@@ -305,8 +311,21 @@
                     </table>
                 </div>
             </div>
+            </div>
         </div>
     </div>
+        
+        <!-- Right Section: Collected Labels -->
+        <div class="section database-section">
+            <div class="section-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="collapse-btn" data-section="labels" title="Collapse/Expand section">
+                        <span class="collapse-icon">▼</span>
+                    </button>
+                    <h2>Collected Labels</h2>
+                </div>
+            </div>
+            <div class="section-content" data-section="labels">
     
     <script src="{{ url_for('static', filename='app.js') }}?v=5"></script>
 </body>

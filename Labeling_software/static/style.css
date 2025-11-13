@@ -52,12 +52,63 @@ body {
     justify-content: space-between;
     align-items: center;
     background-color: #fafafa;
+    cursor: pointer;
+    user-select: none;
+}
+
+.section-header:hover {
+    background-color: #f0f0f0;
 }
 
 .section-header h2 {
     font-size: 18px;
     font-weight: 600;
     color: #333;
+    margin: 0;
+}
+
+/* Collapse button */
+.collapse-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+    border-radius: 4px;
+}
+
+.collapse-btn:hover {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+.collapse-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.section.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+/* Section content - collapsible */
+.section-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 10000px;
+    opacity: 1;
+}
+
+.section.collapsed .section-content {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
 }
 
 /* Mode selector buttons */

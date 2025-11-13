@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     initializePairwiseMode();
     setupLabelsTabs();
+    setupCollapseButtons();
+    loadCollapsedState();
 });
 
 // Setup event listeners
