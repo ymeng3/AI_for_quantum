@@ -237,7 +237,12 @@
         <!-- Middle Section: Image Grid -->
         <div class="section image-grid-section">
             <div class="section-header">
-                <h2>Image Bank</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="collapse-btn" data-section="imageBank" title="Collapse/Expand section">
+                        <span class="collapse-icon">▼</span>
+                    </button>
+                    <h2>Image Bank</h2>
+                </div>
                 <div class="filter-controls">
                     <select id="filterSelect">
                         <option value="all">All Images</option>
@@ -247,6 +252,7 @@
                     <span id="imageCount" style="margin-left: 10px; font-size: 12px; color: #666;"></span>
                 </div>
             </div>
+            <div class="section-content" data-section="imageBank">
             <div class="pagination-controls" id="paginationControls" style="display: none; padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">
                 <button id="prevPageBtn" style="margin: 0 10px; padding: 5px 15px;">← Previous</button>
                 <span id="pageInfo" style="margin: 0 10px; font-size: 12px; color: #666;"></span>
@@ -254,6 +260,7 @@
             </div>
             <div class="image-grid" id="imageGrid">
                 <!-- Images will be loaded here -->
+            </div>
             </div>
         </div>
         
@@ -313,7 +320,6 @@
             </div>
             </div>
         </div>
-    </div>
         
         <!-- Right Section: Collected Labels -->
         <div class="section database-section">
@@ -324,8 +330,60 @@
                     </button>
                     <h2>Collected Labels</h2>
                 </div>
+                <button id="exportBtn" class="export-btn">Export CSV</button>
             </div>
             <div class="section-content" data-section="labels">
+            <div class="labels-tabs" style="display: flex; border-bottom: 2px solid #e0e0e0; background-color: #fafafa;">
+                <button id="absoluteLabelsTab" class="label-tab active" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                    Absolute Scoring
+                </button>
+                <button id="pairwiseLabelsTab" class="label-tab" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                    Pairwise Comparison
+                </button>
+            </div>
+            <div class="table-container">
+                <!-- Absolute Scoring Labels Table -->
+                <div id="absoluteLabelsSection" class="labels-section">
+                    <table id="labelsTable">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Reconstruction</th>
+                                <th>Quality Scores</th>
+                                <th>Labeler</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="labelsTableBody">
+                            <!-- Labels will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pairwise Comparison Labels Table -->
+                <div id="pairwiseLabelsSection" class="labels-section" style="display: none;">
+                    <table id="pairwiseTable">
+                        <thead>
+                            <tr>
+                                <th>Image 1</th>
+                                <th>Image 2</th>
+                                <th>Reconstruction</th>
+                                <th>Winner</th>
+                                <th>Labeler</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pairwiseTableBody">
+                            <!-- Pairwise comparisons will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
     
     <script src="{{ url_for('static', filename='app.js') }}?v=5"></script>
 </body>
