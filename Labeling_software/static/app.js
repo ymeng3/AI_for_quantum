@@ -872,6 +872,8 @@ function initializePairwiseMode() {
 
 // Select image for pairwise comparison (manual selection)
 function selectImageForPairwise(img, itemElement) {
+    console.log('selectImageForPairwise called', img.path, 'Image1:', pairwiseImage1?.path, 'Image2:', pairwiseImage2?.path);
+    
     // Check if clicking on an already selected image (toggle/deselect)
     if (pairwiseImage1 && pairwiseImage1.path === img.path) {
         // Deselect Image 1
@@ -888,13 +890,16 @@ function selectImageForPairwise(img, itemElement) {
     // If both are empty, fill Image 1
     // If Image 1 is empty but Image 2 is filled, fill Image 1
     // If Image 2 is empty but Image 1 is filled, fill Image 2
-    // If both are filled, fill Image 1 (replacing it)
+    // If both are filled, replace Image 1
     if (!pairwiseImage1) {
+        console.log('Setting Image 1');
         setPairwiseImage(1, img, itemElement);
     } else if (!pairwiseImage2) {
+        console.log('Setting Image 2');
         setPairwiseImage(2, img, itemElement);
     } else {
         // Both filled - replace Image 1
+        console.log('Replacing Image 1');
         setPairwiseImage(1, img, itemElement);
     }
 }
@@ -922,36 +927,54 @@ function clearPairwiseImage(slot) {
 
 // Set a pairwise image in a specific slot
 function setPairwiseImage(slot, img, itemElement) {
+    console.log('setPairwiseImage called', slot, img.path);
+    
     if (slot === 1) {
         pairwiseImage1 = img;
         const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
         const imgEl = document.getElementById('pairwiseImage1');
-        imgEl.src = `/api/images/${encodedPath}`;
-        imgEl.onload = function() {
-            const slider = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
-            const brightness = slider ? parseInt(slider.value) : 100;
-            this.style.filter = `brightness(${brightness}%)`;
-            // Ensure consistent sizing
-            this.style.width = '100%';
-            this.style.height = '100%';
-            this.style.objectFit = 'contain';
-        };
-        document.getElementById('pairwiseImage1Info').textContent = img.name;
-    } else {
+        if (imgEl) {
+            imgEl.src = `/api/images/${encodedPath}`;
+            imgEl.onload = function() {
+                const slider = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
+                const brightness = slider ? parseInt(slider.value) : 100;
+                this.style.filter = `brightness(${brightness}%)`;
+                // Ensure consistent sizing
+                this.style.width = '100%';
+                this.style.height = '100%';
+                this.style.objectFit = 'contain';
+            };
+            imgEl.onerror = function() {
+                console.error('Failed to load image for pairwise Image 1:', encodedPath);
+            };
+        }
+        const infoEl = document.getElementById('pairwiseImage1Info');
+        if (infoEl) {
+            infoEl.textContent = img.name;
+        }
+    } else if (slot === 2) {
         pairwiseImage2 = img;
         const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
         const imgEl = document.getElementById('pairwiseImage2');
-        imgEl.src = `/api/images/${encodedPath}`;
-        imgEl.onload = function() {
-            const slider = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
-            const brightness = slider ? parseInt(slider.value) : 100;
-            this.style.filter = `brightness(${brightness}%)`;
-            // Ensure consistent sizing
-            this.style.width = '100%';
-            this.style.height = '100%';
-            this.style.objectFit = 'contain';
-        };
-        document.getElementById('pairwiseImage2Info').textContent = img.name;
+        if (imgEl) {
+            imgEl.src = `/api/images/${encodedPath}`;
+            imgEl.onload = function() {
+                const slider = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
+                const brightness = slider ? parseInt(slider.value) : 100;
+                this.style.filter = `brightness(${brightness}%)`;
+                // Ensure consistent sizing
+                this.style.width = '100%';
+                this.style.height = '100%';
+                this.style.objectFit = 'contain';
+            };
+            imgEl.onerror = function() {
+                console.error('Failed to load image for pairwise Image 2:', encodedPath);
+            };
+        }
+        const infoEl = document.getElementById('pairwiseImage2Info');
+        if (infoEl) {
+            infoEl.textContent = img.name;
+        }
     }
     
     // Update visual indicators in grid
