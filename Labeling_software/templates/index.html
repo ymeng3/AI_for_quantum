@@ -287,63 +287,6 @@
             </div>
         </div>
         
-        <!-- Right Section: Database Table -->
-        <div class="section database-section">
-            <div class="section-header">
-                <h2>Collected Labels</h2>
-                <button id="exportBtn" class="export-btn">Export CSV</button>
-            </div>
-            <div class="labels-tabs" style="display: flex; border-bottom: 2px solid #e0e0e0; background-color: #fafafa;">
-                <button id="absoluteLabelsTab" class="label-tab active" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
-                    Absolute Scoring
-                </button>
-                <button id="pairwiseLabelsTab" class="label-tab" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
-                    Pairwise Comparison
-                </button>
-            </div>
-            <div class="table-container">
-                <!-- Absolute Scoring Labels Table -->
-                <div id="absoluteLabelsSection" class="labels-section">
-                    <table id="labelsTable">
-                        <thead>
-                            <tr>
-                                <th>File</th>
-                                <th>Reconstruction</th>
-                                <th>Quality Scores</th>
-                                <th>Labeler</th>
-                                <th>Notes</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="labelsTableBody">
-                            <!-- Labels will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Pairwise Comparison Labels Table -->
-                <div id="pairwiseLabelsSection" class="labels-section" style="display: none;">
-                    <table id="pairwiseTable">
-                        <thead>
-                            <tr>
-                                <th>Image 1</th>
-                                <th>Image 2</th>
-                                <th>Reconstruction</th>
-                                <th>Winner</th>
-                                <th>Labeler</th>
-                                <th>Notes</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pairwiseTableBody">
-                            <!-- Pairwise comparisons will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            </div>
-        </div>
-        
         <!-- Right Section: Collected Labels -->
         <div class="section database-section">
             <div class="section-header">
