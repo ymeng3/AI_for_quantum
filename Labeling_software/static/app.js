@@ -13,7 +13,7 @@ let currentPage = 1;
 const imagesPerPage = 50; // Reduced from 100 to 50 for better performance
 
 // Pairwise comparison state
-let currentMode = 'absolute'; // 'absolute' or 'pairwise'
+let currentMode = 'pairwise'; // 'absolute' or 'pairwise'
 let pairwiseImage1 = null;
 let pairwiseImage2 = null;
 let pairwiseComparisons = {}; // {reconstruction_type: winner} where winner is '1', '2', or 'tie'
