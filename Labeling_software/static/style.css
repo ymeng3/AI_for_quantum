@@ -15,7 +15,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    max-width: 1400px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -312,12 +312,17 @@ body {
 
 .reconstruction-quality-slider {
     width: 100%;
+    min-width: 300px;
     height: 8px;
     border-radius: 3px;
     background: #ddd;
     outline: none;
     -webkit-appearance: none;
     appearance: none;
+}
+
+.reconstruction-quality-control {
+    min-width: 300px;
 }
 
 .reconstruction-quality-slider::-webkit-slider-thumb {
