@@ -85,6 +85,19 @@
                         </div>
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="(1 x 1)" value="(1 x 1)">
+                                <span>(1 x 1)</span>
+                            </label>
+                            <div class="reconstruction-quality-control" data-recon="(1 x 1)" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="(1 x 1)">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="(1 x 1)" min="0" max="10" value="5" 
+                                       style="width: 100%; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
                                 <input type="checkbox" class="reconstruction-checkbox" data-value="(2 x 2)" value="(2 x 2)">
                                 <span>(2 x 2)</span>
                             </label>
@@ -201,6 +214,16 @@
                                     <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
                                     <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
                                     <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
+                                </div>
+                            </div>
+                            
+                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">(1 x 1)</label>
+                                <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="pairwise-btn" data-recon="(1 x 1)" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="(1 x 1)" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="(1 x 1)" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                    <button class="pairwise-btn" data-recon="(1 x 1)" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
                                 </div>
                             </div>
                             
