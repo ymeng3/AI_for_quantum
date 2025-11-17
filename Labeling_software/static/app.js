@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupLabelsTabs();
     setupCollapseButtons();
     loadCollapsedState();
+    
+    // Set initial button visibility based on default mode
+    document.getElementById('randomBtn').style.display = currentMode === 'absolute' ? 'block' : 'none';
+    document.getElementById('pairwiseRandomBtn').style.display = currentMode === 'pairwise' ? 'block' : 'none';
 });
 
 // Setup event listeners
@@ -129,8 +133,13 @@ function setupEventListeners() {
     // Save button
     document.getElementById('saveBtn').addEventListener('click', saveLabel);
     
-    // Random image button (absolute scoring mode)
+    // Random image button (absolute scoring mode) - now in header
     document.getElementById('randomBtn').addEventListener('click', selectRandomImage);
+    
+    // Random pair button (pairwise mode) - now in header
+    document.getElementById('pairwiseRandomBtn').addEventListener('click', () => {
+        loadRandomPair();
+    });
     
     // Clear button
     document.getElementById('clearBtn').addEventListener('click', clearLabels);
@@ -803,6 +812,10 @@ function switchMode(mode) {
     document.getElementById('absoluteModeBtn').classList.toggle('active', mode === 'absolute');
     document.getElementById('pairwiseModeBtn').classList.toggle('active', mode === 'pairwise');
     
+    // Show/hide random buttons in header based on mode
+    document.getElementById('randomBtn').style.display = mode === 'absolute' ? 'block' : 'none';
+    document.getElementById('pairwiseRandomBtn').style.display = mode === 'pairwise' ? 'block' : 'none';
+    
     // Show/hide mode sections
     document.getElementById('absoluteMode').style.display = mode === 'absolute' ? 'flex' : 'none';
     document.getElementById('pairwiseMode').style.display = mode === 'pairwise' ? 'block' : 'none';
@@ -861,13 +874,10 @@ function initializePairwiseMode() {
     // Pairwise save button
     document.getElementById('pairwiseSaveBtn').addEventListener('click', savePairwiseComparison);
     
-    // Pairwise random pair button
-    document.getElementById('pairwiseRandomBtn').addEventListener('click', () => {
-        loadRandomPair();
-    });
-    
     // Pairwise clear button
     document.getElementById('pairwiseClearBtn').addEventListener('click', clearPairwiseComparison);
+    
+    // Note: pairwiseRandomBtn event listener is set up in setupEventListeners() since it's now in the header
 }
 
 // Select image for pairwise comparison (manual selection)
