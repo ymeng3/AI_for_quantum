@@ -156,26 +156,44 @@ def init_db():
     conn.close()
 
 # Get all image files from data directory or Google Drive
+# Only include images from specific trajectory folders
+ALLOWED_TRAJECTORY_FOLDERS = ['2022-02-04', '2022-02-06', '2022-04-11']
+
 def get_image_files():
     image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
     image_files = []
     
     if USE_GOOGLE_DRIVE and DATA_DIR is None:
         # Fetch from Google Drive
-        return get_google_drive_images()
+        all_images = get_google_drive_images()
+        # Filter to only include allowed trajectory folders
+        filtered_images = []
+        for img in all_images:
+            path = img.get('path', '')
+            # Check if path contains any of the allowed trajectory folders
+            if any(folder in path for folder in ALLOWED_TRAJECTORY_FOLDERS):
+                filtered_images.append(img)
+        return filtered_images
     elif DATA_DIR and DATA_DIR.exists():
-        # Use local directory
-        for root, dirs, files in os.walk(DATA_DIR):
-            for file in files:
-                if Path(file).suffix.lower() in image_extensions:
-                    rel_path = os.path.relpath(os.path.join(root, file), DATA_DIR)
-                    # Normalize path separators to forward slashes
-                    rel_path = rel_path.replace('\\', '/')
-                    image_files.append({
-                        'path': rel_path,
-                        'name': file,
-                        'full_path': os.path.join(root, file)
-                    })
+        # Use local directory - only include Trajectories subfolders
+        trajectories_dir = DATA_DIR / 'Trajectories'
+        if trajectories_dir.exists():
+            for folder_name in ALLOWED_TRAJECTORY_FOLDERS:
+                folder_path = trajectories_dir / folder_name
+                if folder_path.exists():
+                    for root, dirs, files in os.walk(folder_path):
+                        for file in files:
+                            if Path(file).suffix.lower() in image_extensions:
+                                # Create relative path from DATA_DIR
+                                full_path = os.path.join(root, file)
+                                rel_path = os.path.relpath(full_path, DATA_DIR)
+                                # Normalize path separators to forward slashes
+                                rel_path = rel_path.replace('\\', '/')
+                                image_files.append({
+                                    'path': rel_path,
+                                    'name': file,
+                                    'full_path': full_path
+                                })
         return sorted(image_files, key=lambda x: x['name'])
     else:
         # No data source available
