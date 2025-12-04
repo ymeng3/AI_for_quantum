@@ -23,8 +23,8 @@
                 <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <div class="mode-selector" style="display: flex; gap: 10px; align-items: center;">
                         <label style="font-size: 13px; color: #666;">Mode:</label>
-                        <button id="absoluteModeBtn" class="mode-btn" data-mode="absolute">Absolute Scoring</button>
                         <button id="pairwiseModeBtn" class="mode-btn active" data-mode="pairwise">Pairwise Comparison</button>
+                        <button id="absoluteModeBtn" class="mode-btn" data-mode="absolute">Absolute Scoring</button>
                     </div>
                     <button id="randomBtn" class="save-btn" style="background-color: #6c757d; padding: 6px 12px; font-size: 12px;">Random Image</button>
                     <button id="pairwiseRandomBtn" class="save-btn" style="background-color: #6c757d; padding: 6px 12px; font-size: 12px; display: none;">Random Pair</button>
@@ -335,16 +335,16 @@
             </div>
             <div class="section-content" data-section="labels">
             <div class="labels-tabs" style="display: flex; border-bottom: 2px solid #e0e0e0; background-color: #fafafa;">
-                <button id="absoluteLabelsTab" class="label-tab active" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
-                    Absolute Scoring
-                </button>
-                <button id="pairwiseLabelsTab" class="label-tab" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                <button id="pairwiseLabelsTab" class="label-tab active" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
                     Pairwise Comparison
+                </button>
+                <button id="absoluteLabelsTab" class="label-tab" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                    Absolute Scoring
                 </button>
             </div>
             <div class="table-container">
                 <!-- Absolute Scoring Labels Table -->
-                <div id="absoluteLabelsSection" class="labels-section">
+                <div id="absoluteLabelsSection" class="labels-section" style="display: none;">
                     <table id="labelsTable">
                         <thead>
                             <tr>
@@ -363,7 +363,7 @@
                 </div>
                 
                 <!-- Pairwise Comparison Labels Table -->
-                <div id="pairwiseLabelsSection" class="labels-section" style="display: none;">
+                <div id="pairwiseLabelsSection" class="labels-section">
                     <table id="pairwiseTable">
                         <thead>
                             <tr>
