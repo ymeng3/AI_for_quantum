@@ -809,19 +809,56 @@ def save_pairwise_comparison():
 @app.route('/api/pairwise', methods=['GET'])
 def get_pairwise_comparisons():
     """Get all pairwise comparisons"""
-    conn = get_db_connection()
-    
-    if USE_POSTGRES:
-        c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-        comparisons = [dict(row) for row in c.fetchall()]
-    else:
-        c = conn.cursor()
-        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-        comparisons = [dict(row) for row in c.fetchall()]
-    
-    conn.close()
-    return jsonify(comparisons)
+    try:
+        conn = get_db_connection()
+        
+        # Check if table exists first
+        if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'pairwise_comparisons'
+                );
+            """)
+            table_exists = c.fetchone()[0]
+        else:
+            c = conn.cursor()
+            c.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='pairwise_comparisons'
+            """)
+            table_exists = c.fetchone() is not None
+        
+        if not table_exists:
+            conn.close()
+            # Table doesn't exist - return empty list (init_db should create it, but handle gracefully)
+            return jsonify([])
+        
+        # Table exists, query it
+        if USE_POSTGRES:
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            comparisons = [dict(row) for row in c.fetchall()]
+        else:
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            # Convert to list of dicts
+            c.execute('PRAGMA table_info(pairwise_comparisons)')
+            columns = [row[1] for row in c.fetchall()]
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            comparisons = []
+            for row in c.fetchall():
+                comp_dict = {}
+                for i, col in enumerate(columns):
+                    comp_dict[col] = row[i]
+                comparisons.append(comp_dict)
+        
+        conn.close()
+        return jsonify(comparisons)
+    except Exception as e:
+        import traceback
+        print(f"Error in get_pairwise_comparisons: {e}\n{traceback.format_exc()}")
+        # Return empty list on error rather than crashing
+        return jsonify([])
 
 @app.route('/api/pairwise/<int:comp_id>', methods=['DELETE'])
 def delete_pairwise_comparison(comp_id):
