@@ -771,6 +771,9 @@ async function deleteLabel(filePath) {
 async function exportLabels() {
     try {
         const response = await fetch('/api/labels/export');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const csv = await response.text();
         
         // Create download link
@@ -785,7 +788,32 @@ async function exportLabels() {
         window.URL.revokeObjectURL(url);
     } catch (error) {
         console.error('Error exporting labels:', error);
-        alert('Error exporting labels');
+        alert('Error exporting labels: ' + error.message);
+    }
+}
+
+// Export pairwise comparisons as CSV
+async function exportPairwiseComparisons() {
+    try {
+        const response = await fetch('/api/pairwise/export');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csv = await response.text();
+        
+        // Create download link
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pairwise_comparisons_export.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error exporting pairwise comparisons:', error);
+        alert('Error exporting pairwise comparisons: ' + error.message);
     }
 }
 
