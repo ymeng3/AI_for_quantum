@@ -853,10 +853,15 @@ def get_pairwise_comparisons():
                 comparisons.append(comp_dict)
         
         conn.close()
+        print(f"DEBUG: Returning {len(comparisons)} pairwise comparisons")
         return jsonify(comparisons)
     except Exception as e:
         import traceback
-        print(f"Error in get_pairwise_comparisons: {e}\n{traceback.format_exc()}")
+        error_msg = f"Error in get_pairwise_comparisons: {e}\n{traceback.format_exc()}"
+        print(error_msg)
+        # Log to stderr so it shows up in Flask logs
+        import sys
+        sys.stderr.write(error_msg + "\n")
         # Return empty list on error rather than crashing
         return jsonify([])
 
