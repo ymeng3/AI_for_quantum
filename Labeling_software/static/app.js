@@ -1176,6 +1176,9 @@ function setupLabelsTabs() {
     document.getElementById('pairwiseLabelsTab').addEventListener('click', () => {
         switchLabelsTab('pairwise');
     });
+    
+    // Set initial tab state (pairwise is default)
+    switchLabelsTab('pairwise');
 }
 
 // Switch between absolute and pairwise labels tabs
