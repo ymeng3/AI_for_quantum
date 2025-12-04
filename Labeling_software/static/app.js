@@ -207,10 +207,19 @@ let pairwiseComparisonsList = [];
 async function loadPairwiseComparisons() {
     try {
         const response = await fetch('/api/pairwise');
+        if (!response.ok) {
+            console.error('Failed to load pairwise comparisons:', response.status, response.statusText);
+            pairwiseComparisonsList = [];
+            renderPairwiseTable();
+            return;
+        }
         pairwiseComparisonsList = await response.json();
+        console.log(`Loaded ${pairwiseComparisonsList.length} pairwise comparisons`);
         renderPairwiseTable();
     } catch (error) {
         console.error('Error loading pairwise comparisons:', error);
+        pairwiseComparisonsList = [];
+        renderPairwiseTable();
     }
 }
 
@@ -1195,7 +1204,13 @@ function switchLabelsTab(tab) {
 // Render pairwise comparisons table
 function renderPairwiseTable() {
     const tbody = document.getElementById('pairwiseTableBody');
+    if (!tbody) {
+        console.error('pairwiseTableBody element not found!');
+        return;
+    }
     tbody.innerHTML = '';
+    
+    console.log(`Rendering ${pairwiseComparisonsList.length} pairwise comparisons`);
     
     if (pairwiseComparisonsList.length === 0) {
         const row = document.createElement('tr');
