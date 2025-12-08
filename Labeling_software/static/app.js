@@ -42,7 +42,52 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Show a notification message
-function showNotification(message, duration = 3000) {
+function showNotification(message, duration = 3000, targetElement = null) {
+    // If target element is provided, show notification next to it
+    if (targetElement) {
+        // Find the parent label container
+        const labelContainer = targetElement.closest('label');
+        if (labelContainer) {
+            // Find the span with the text "Mark this image as 'Bad'"
+            const textSpan = labelContainer.querySelector('span');
+            
+            // Remove any existing notification first
+            const existingNotification = labelContainer.querySelector('.inline-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // Create notification element
+            const notification = document.createElement('span');
+            notification.className = 'inline-notification';
+            notification.textContent = message;
+            
+            // Insert after the text span
+            if (textSpan && textSpan.nextSibling) {
+                labelContainer.insertBefore(notification, textSpan.nextSibling);
+            } else {
+                labelContainer.appendChild(notification);
+            }
+            
+            // Trigger animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Remove after duration
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, duration);
+            return;
+        }
+    }
+    
+    // Fallback to global notification container
     const container = document.getElementById('notificationContainer');
     if (!container) return;
     
@@ -1074,17 +1119,14 @@ function selectImageForPairwise(img, itemElement) {
     // If both are empty, fill Image 1
     // If Image 1 is empty but Image 2 is filled, fill Image 1
     // If Image 2 is empty but Image 1 is filled, fill Image 2
-    // If both are filled, replace Image 1
+    // If both are filled, replace Image 2 (most recently selected)
     if (!pairwiseImage1) {
-        console.log('Setting Image 1');
         setPairwiseImage(1, img, itemElement);
     } else if (!pairwiseImage2) {
-        console.log('Setting Image 2');
         setPairwiseImage(2, img, itemElement);
     } else {
-        // Both filled - replace Image 1
-        console.log('Replacing Image 1');
-        setPairwiseImage(1, img, itemElement);
+        // Both filled - replace Image 2 (the second one)
+        setPairwiseImage(2, img, itemElement);
     }
 }
 
@@ -1272,6 +1314,19 @@ async function markImageAsBad(img, slot) {
                 labels[img.path] = labelData;
             }
             
+            // Update the specific image item's badge in the grid
+            const imageItem = document.querySelector(`.image-item[data-path="${img.path}"]`);
+            if (imageItem) {
+                let badge = imageItem.querySelector('.status-badge');
+                if (!badge) {
+                    badge = document.createElement('div');
+                    badge.className = 'status-badge';
+                    imageItem.appendChild(badge);
+                }
+                badge.textContent = 'Bad';
+                badge.className = 'status-badge bad';
+            }
+            
             // Update image grid status without full reload
             updateImageGridStatus();
             
@@ -1303,8 +1358,8 @@ async function markImageAsBad(img, slot) {
                 checkbox.disabled = false;
             }
             
-            // Show notification
-            showNotification(`Image marked as "Bad" and replaced with ${newImg.name}`);
+            // Show notification next to the checkbox
+            showNotification(`Image marked as "Bad" and replaced with ${newImg.name}`, 3000, checkbox);
         } else {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
             alert('Error marking image as Bad: ' + (errorData.error || 'Unknown error'));
