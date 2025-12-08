@@ -392,8 +392,16 @@ def sync_from_database_to_sheets():
                 # Get or create worksheet
                 try:
                     worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_ABSOLUTE_TAB)
+                    # Ensure headers are correct
+                    headers = worksheet.row_values(1)
+                    expected_headers = ['File_Path', 'File_Name', 'Quality', 'Reconstruction', 
+                                       'Reconstruction_Scores', 'Labeler_Name', 'Notes', 'Created_At', 'Updated_At']
+                    if not headers or headers != expected_headers:
+                        # Clear and add correct headers
+                        worksheet.clear()
+                        worksheet.append_row(expected_headers)
                     existing = worksheet.get_all_records()
-                    existing_paths = {row.get('File_Path', '') for row in existing}
+                    existing_paths = {str(row.get('File_Path', '')) for row in existing}
                 except:
                     worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_ABSOLUTE_TAB, rows=1000, cols=10)
                     worksheet.append_row([
@@ -405,24 +413,27 @@ def sync_from_database_to_sheets():
                 # Add new rows
                 added = 0
                 for label in labels:
-                    file_path = label.get('file_path', '')
+                    file_path = str(label.get('file_path', ''))
                     if file_path and file_path not in existing_paths:
                         row = [
                             file_path,
-                            label.get('file_name', ''),
-                            label.get('quality', ''),
-                            label.get('reconstruction', ''),
-                            label.get('reconstruction_scores', ''),
-                            label.get('labeler_name', ''),
-                            label.get('notes', ''),
-                            label.get('created_at', '') or datetime.now().isoformat(),
-                            label.get('updated_at', '') or datetime.now().isoformat()
+                            str(label.get('file_name', '')),
+                            str(label.get('quality', '')),
+                            str(label.get('reconstruction', '')),
+                            str(label.get('reconstruction_scores', '')),
+                            str(label.get('labeler_name', '')),
+                            str(label.get('notes', '')),
+                            str(label.get('created_at', '') or datetime.now().isoformat()),
+                            str(label.get('updated_at', '') or datetime.now().isoformat())
                         ]
-                        worksheet.append_row(row)
+                        # Ensure row has exactly 9 values
+                        while len(row) < 9:
+                            row.append('')
+                        worksheet.append_row(row[:9])
                         added += 1
                         existing_paths.add(file_path)
                 
-                print(f"Synced {added} new absolute labels to Google Sheets (total in DB: {len(labels)})")
+                print(f"✅ Synced {added} new absolute labels to Google Sheets (total in DB: {len(labels)})")
             else:
                 print("No absolute labels in database to sync")
         except Exception as e:
