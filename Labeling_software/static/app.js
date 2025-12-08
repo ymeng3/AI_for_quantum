@@ -309,29 +309,9 @@ function renderImageGrid(filter = 'all') {
     
     let filteredImages = images;
     
-    // In pairwise mode, exclude images labeled as "Bad"
-    if (currentMode === 'pairwise') {
-        filteredImages = images.filter(img => {
-            const label = labels[img.path];
-            if (!label || !label.reconstruction) {
-                return true; // No label, include it
-            }
-            // Check if reconstruction contains "Bad"
-            let reconstruction = label.reconstruction;
-            if (typeof reconstruction === 'string') {
-                try {
-                    reconstruction = JSON.parse(reconstruction);
-                } catch (e) {
-                    // Not JSON, treat as string
-                    reconstruction = [reconstruction];
-                }
-            }
-            if (Array.isArray(reconstruction)) {
-                return !reconstruction.includes('Bad');
-            }
-            return reconstruction !== 'Bad';
-        });
-    }
+    // In pairwise mode, we still show Bad images (so user can see the badge)
+    // but they will be prevented from selection in selectImageForPairwise
+    // This allows users to see which images are marked as Bad
     
     if (filter === 'labeled') {
         filteredImages = filteredImages.filter(img => {
@@ -419,17 +399,17 @@ function renderImageGrid(filter = 'all') {
                 if (Array.isArray(recon)) {
                     if (recon.includes('Bad')) {
                         badge.textContent = 'Bad';
-                        badge.classList.add('bad');
+                        badge.className = 'status-badge bad';
                     } else if (recon.length > 0) {
                         badge.textContent = '✓';
-                        badge.classList.add('labeled');
+                        badge.className = 'status-badge labeled';
                     }
                 } else if (recon === 'Bad') {
                     badge.textContent = 'Bad';
-                    badge.classList.add('bad');
+                    badge.className = 'status-badge bad';
                 } else if (recon) {
                     badge.textContent = '✓';
-                    badge.classList.add('labeled');
+                    badge.className = 'status-badge labeled';
                 }
             } catch {
                 // Ignore parse errors
@@ -519,6 +499,9 @@ function renderImageGrid(filter = 'all') {
                 }
             });
         }
+        
+        // Update all badges after grid is rendered
+        updateImageGridStatus();
     }, 50); // Small delay to ensure DOM is ready
 }
 
@@ -1314,21 +1297,27 @@ async function markImageAsBad(img, slot) {
                 labels[img.path] = labelData;
             }
             
-            // Update the specific image item's badge in the grid
-            const imageItem = document.querySelector(`.image-item[data-path="${img.path}"]`);
-            if (imageItem) {
-                let badge = imageItem.querySelector('.status-badge');
-                if (!badge) {
-                    badge = document.createElement('div');
-                    badge.className = 'status-badge';
-                    imageItem.appendChild(badge);
-                }
-                badge.textContent = 'Bad';
-                badge.className = 'status-badge bad';
-            }
+            // Re-render the grid to show the Bad badge
+            // Since we now show Bad images in pairwise mode, the badge will appear
+            const currentFilter = document.getElementById('filterSelect')?.value || 'all';
+            renderImageGrid(currentFilter);
             
-            // Update image grid status without full reload
-            updateImageGridStatus();
+            // Also update the specific image item badge directly for immediate feedback
+            setTimeout(() => {
+                const imageItem = document.querySelector(`.image-item[data-path="${img.path}"]`);
+                if (imageItem) {
+                    let badge = imageItem.querySelector('.status-badge');
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge bad';
+                        badge.textContent = 'Bad';
+                        imageItem.appendChild(badge);
+                    } else {
+                        badge.textContent = 'Bad';
+                        badge.className = 'status-badge bad';
+                    }
+                }
+            }, 100);
             
             // Find a random non-Bad image to replace it
             const validImages = images.filter(i => !isImageBad(i.path) && i.path !== img.path);
@@ -1379,7 +1368,7 @@ async function markImageAsBad(img, slot) {
 
 // Load a random pair of images for comparison
 function loadRandomPair() {
-    // Filter out "Bad" images
+    // Filter out "Bad" images for random selection
     const validImages = images.filter(img => !isImageBad(img.path));
     
     if (validImages.length < 2) {
