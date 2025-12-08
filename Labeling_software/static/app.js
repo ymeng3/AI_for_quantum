@@ -901,52 +901,50 @@ function initializePairwiseMode() {
         pairwiseNotes = e.target.value;
     });
     
-    // Mark as Bad checkboxes - prevent duplicate listeners
+    // Mark as Bad checkboxes - use direct onclick to ensure it works
     const markBad1 = document.getElementById('markBadImage1');
     const markBad2 = document.getElementById('markBadImage2');
     
     // Remove old listeners if they exist
-    if (markBad1 && markBad1._badListener) {
-        markBad1.removeEventListener('change', markBad1._badListener);
+    if (markBad1 && markBad1._badHandler) {
+        markBad1.removeEventListener('change', markBad1._badHandler);
+        markBad1.onclick = null;
     }
-    if (markBad2 && markBad2._badListener) {
-        markBad2.removeEventListener('change', markBad2._badListener);
+    if (markBad2 && markBad2._badHandler) {
+        markBad2.removeEventListener('change', markBad2._badHandler);
+        markBad2.onclick = null;
     }
     
     if (markBad1) {
         const handler1 = async (e) => {
-            console.log('Bad checkbox 1 clicked:', e.target.checked, 'pairwiseImage1:', !!pairwiseImage1);
-            if (e.target.checked && pairwiseImage1) {
-                console.log('Calling markImageAsBad for image 1');
+            e.preventDefault();
+            e.stopPropagation();
+            if (markBad1.checked && pairwiseImage1) {
                 await markImageAsBad(pairwiseImage1, 1);
-            } else if (e.target.checked && !pairwiseImage1) {
+            } else if (markBad1.checked && !pairwiseImage1) {
                 alert('Please select an image first');
-                e.target.checked = false;
+                markBad1.checked = false;
             }
         };
-        markBad1._badListener = handler1;
+        markBad1._badHandler = handler1;
         markBad1.addEventListener('change', handler1);
-        console.log('Bad checkbox 1 event listener attached');
-    } else {
-        console.error('markBadImage1 not found!');
+        markBad1.onclick = handler1; // Also use onclick as backup
     }
     
     if (markBad2) {
         const handler2 = async (e) => {
-            console.log('Bad checkbox 2 clicked:', e.target.checked, 'pairwiseImage2:', !!pairwiseImage2);
-            if (e.target.checked && pairwiseImage2) {
-                console.log('Calling markImageAsBad for image 2');
+            e.preventDefault();
+            e.stopPropagation();
+            if (markBad2.checked && pairwiseImage2) {
                 await markImageAsBad(pairwiseImage2, 2);
-            } else if (e.target.checked && !pairwiseImage2) {
+            } else if (markBad2.checked && !pairwiseImage2) {
                 alert('Please select an image first');
-                e.target.checked = false;
+                markBad2.checked = false;
             }
         };
-        markBad2._badListener = handler2;
+        markBad2._badHandler = handler2;
         markBad2.addEventListener('change', handler2);
-        console.log('Bad checkbox 2 event listener attached');
-    } else {
-        console.error('markBadImage2 not found!');
+        markBad2.onclick = handler2; // Also use onclick as backup
     }
     
     // Pairwise comparison buttons
@@ -1174,8 +1172,6 @@ function isImageBad(imgPath) {
 
 // Mark an image as "Bad" and replace it with a random non-Bad image
 async function markImageAsBad(img, slot) {
-    console.log('markImageAsBad called:', { slot, imgPath: img?.path, labelerName: pairwiseLabelerName });
-    
     if (!pairwiseLabelerName) {
         alert('Please enter your name before marking an image as Bad');
         const checkbox = document.getElementById(`markBadImage${slot}`);
@@ -1190,8 +1186,11 @@ async function markImageAsBad(img, slot) {
         return;
     }
     
+    // Disable checkbox during processing
+    const checkbox = document.getElementById(`markBadImage${slot}`);
+    if (checkbox) checkbox.disabled = true;
+    
     try {
-        console.log('Sending Bad label request for:', img.path);
         // Save the image as "Bad" label
         const response = await fetch('/api/labels', {
             method: 'POST',
@@ -1210,12 +1209,10 @@ async function markImageAsBad(img, slot) {
         });
         
         if (response.ok) {
-            console.log('Bad label saved successfully');
             // Update local labels cache immediately without full reload
             const labelData = await response.json();
             if (labelData && labelData.id) {
                 labels[img.path] = labelData;
-                console.log('Updated local labels cache');
             }
             
             // Update image grid status without full reload
@@ -1223,19 +1220,19 @@ async function markImageAsBad(img, slot) {
             
             // Find a random non-Bad image to replace it
             const validImages = images.filter(i => !isImageBad(i.path) && i.path !== img.path);
-            console.log(`Found ${validImages.length} valid replacement images`);
             
             if (validImages.length === 0) {
                 alert('No more non-Bad images available to replace this one');
-                const checkbox = document.getElementById(`markBadImage${slot}`);
-                if (checkbox) checkbox.checked = false;
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.disabled = false;
+                }
                 return;
             }
             
             // Select a random image
             const randomIdx = Math.floor(Math.random() * validImages.length);
             const newImg = validImages[randomIdx];
-            console.log(`Replacing with: ${newImg.name}`);
             
             // Find the item element in the grid
             const item = document.querySelector(`.image-item[data-path="${newImg.path}"]`);
@@ -1243,26 +1240,25 @@ async function markImageAsBad(img, slot) {
             // Replace the image
             setPairwiseImage(slot, newImg, item);
             
-            // Uncheck the checkbox
-            const checkbox = document.getElementById(`markBadImage${slot}`);
+            // Uncheck and re-enable the checkbox
             if (checkbox) {
                 checkbox.checked = false;
-                console.log('Checkbox unchecked');
+                checkbox.disabled = false;
             }
-            
-            console.log('✅ Image marked as Bad and replaced successfully');
         } else {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('Error saving Bad label:', errorData);
             alert('Error marking image as Bad: ' + (errorData.error || 'Unknown error'));
-            const checkbox = document.getElementById(`markBadImage${slot}`);
-            if (checkbox) checkbox.checked = false;
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.disabled = false;
+            }
         }
     } catch (error) {
-        console.error('Error marking image as Bad:', error);
         alert('Error marking image as Bad: ' + error.message);
-        const checkbox = document.getElementById(`markBadImage${slot}`);
-        if (checkbox) checkbox.checked = false;
+        if (checkbox) {
+            checkbox.checked = false;
+            checkbox.disabled = false;
+        }
     }
 }
 
