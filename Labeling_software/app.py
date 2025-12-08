@@ -642,6 +642,18 @@ def delete_label(file_path):
     
     deleted = c.rowcount
     conn.commit()
+    
+    # Delete from Google Sheets if configured
+    if deleted > 0:
+        try:
+            from google_sheets_sync import delete_absolute_from_sheets
+            delete_absolute_from_sheets(file_path)
+        except ImportError:
+            pass
+        except Exception as sync_error:
+            import traceback
+            print(f"Warning: Google Sheets delete failed: {sync_error}\n{traceback.format_exc()}")
+    
     conn.close()
     
     if deleted > 0:

@@ -157,6 +157,229 @@ def sync_absolute_to_sheets(label_data, client=None):
         print(f"Error syncing to Google Sheets: {e}")
         return False
 
+def delete_pairwise_from_sheets(image1_path, image2_path, reconstruction_type, client=None):
+    """Delete a pairwise comparison from Google Sheets"""
+    if not client:
+        client = get_google_sheets_client()
+    if not client:
+        return False
+    
+    if not GOOGLE_SHEETS_SPREADSHEET_ID:
+        return False
+    
+    try:
+        spreadsheet = client.open_by_key(GOOGLE_SHEETS_SPREADSHEET_ID)
+        
+        try:
+            worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_PAIRWISE_TAB)
+        except:
+            # Tab doesn't exist, nothing to delete
+            return True
+        
+        # Find the row(s) matching the criteria
+        try:
+            # Search for matching rows
+            all_values = worksheet.get_all_values()
+            rows_to_delete = []
+            
+            for i, row in enumerate(all_values, start=1):
+                # Skip header row
+                if i == 1:
+                    continue
+                # Check if this row matches
+                if (len(row) >= 5 and 
+                    row[0] == image1_path and 
+                    row[2] == image2_path and 
+                    row[4] == reconstruction_type):
+                    rows_to_delete.append(i)
+            
+            # Delete rows from bottom to top to maintain indices
+            for row_num in reversed(rows_to_delete):
+                worksheet.delete_rows(row_num)
+            
+            return len(rows_to_delete) > 0
+        except Exception as e:
+            print(f"Error finding/deleting row in Google Sheets: {e}")
+            return False
+    except Exception as e:
+        print(f"Error deleting from Google Sheets: {e}")
+        return False
+
+def delete_absolute_from_sheets(file_path, client=None):
+    """Delete an absolute scoring label from Google Sheets"""
+    if not client:
+        client = get_google_sheets_client()
+    if not client:
+        return False
+    
+    if not GOOGLE_SHEETS_SPREADSHEET_ID:
+        return False
+    
+    try:
+        spreadsheet = client.open_by_key(GOOGLE_SHEETS_SPREADSHEET_ID)
+        
+        try:
+            worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_ABSOLUTE_TAB)
+        except:
+            # Tab doesn't exist, nothing to delete
+            return True
+        
+        # Find the row matching the file_path
+        try:
+            cell = worksheet.find(file_path)
+            worksheet.delete_rows(cell.row)
+            return True
+        except:
+            # Row not found
+            return False
+    except Exception as e:
+        print(f"Error deleting from Google Sheets: {e}")
+        return False
+
+def sync_from_database_to_sheets():
+    """Sync existing data from database to Google Sheets (one-time migration)"""
+    client = get_google_sheets_client()
+    if not client or not GOOGLE_SHEETS_SPREADSHEET_ID:
+        print("Google Sheets not configured")
+        return
+    
+    from app import get_db_connection, USE_POSTGRES
+    
+    try:
+        spreadsheet = client.open_by_key(GOOGLE_SHEETS_SPREADSHEET_ID)
+        
+        # Sync pairwise comparisons
+        try:
+            conn = get_db_connection()
+            if USE_POSTGRES:
+                from psycopg2.extras import RealDictCursor
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at')
+                comparisons = [dict(row) for row in cursor.fetchall()]
+            else:
+                cursor = conn.cursor()
+                cursor.execute('PRAGMA table_info(pairwise_comparisons)')
+                columns = [row[1] for row in cursor.fetchall()]
+                cursor.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at')
+                comparisons = []
+                for row in cursor.fetchall():
+                    comp_dict = {}
+                    for i, col in enumerate(columns):
+                        comp_dict[col] = row[i]
+                    comparisons.append(comp_dict)
+            conn.close()
+            
+            if comparisons:
+                # Get or create worksheet
+                try:
+                    worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_PAIRWISE_TAB)
+                    # Get existing data to avoid duplicates
+                    existing = worksheet.get_all_records()
+                    existing_keys = set()
+                    for row in existing:
+                        key = (row.get('Image1_Path', ''), row.get('Image2_Path', ''), row.get('Reconstruction_Type', ''))
+                        existing_keys.add(key)
+                except:
+                    worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_PAIRWISE_TAB, rows=1000, cols=10)
+                    worksheet.append_row([
+                        'Image1_Path', 'Image1_Name', 'Image2_Path', 'Image2_Name',
+                        'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At'
+                    ])
+                    existing_keys = set()
+                
+                # Add new rows
+                added = 0
+                for comp in comparisons:
+                    key = (comp.get('image1_path', ''), comp.get('image2_path', ''), comp.get('reconstruction_type', ''))
+                    if key not in existing_keys:
+                        row = [
+                            comp.get('image1_path', ''),
+                            comp.get('image1_name', ''),
+                            comp.get('image2_path', ''),
+                            comp.get('image2_name', ''),
+                            comp.get('reconstruction_type', ''),
+                            comp.get('winner', ''),
+                            comp.get('labeler_name', ''),
+                            comp.get('notes', ''),
+                            comp.get('created_at', '') or datetime.now().isoformat()
+                        ]
+                        worksheet.append_row(row)
+                        added += 1
+                        existing_keys.add(key)
+                
+                print(f"Synced {added} new pairwise comparisons to Google Sheets (total in DB: {len(comparisons)})")
+            else:
+                print("No pairwise comparisons in database to sync")
+        except Exception as e:
+            import traceback
+            print(f"Error syncing pairwise data: {e}\n{traceback.format_exc()}")
+        
+        # Sync absolute scoring
+        try:
+            conn = get_db_connection()
+            if USE_POSTGRES:
+                from psycopg2.extras import RealDictCursor
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute('SELECT * FROM labels ORDER BY created_at')
+                labels = [dict(row) for row in cursor.fetchall()]
+            else:
+                cursor = conn.cursor()
+                cursor.execute('PRAGMA table_info(labels)')
+                columns = [row[1] for row in cursor.fetchall()]
+                cursor.execute('SELECT * FROM labels ORDER BY created_at')
+                labels = []
+                for row in cursor.fetchall():
+                    label_dict = {}
+                    for i, col in enumerate(columns):
+                        label_dict[col] = row[i]
+                    labels.append(label_dict)
+            conn.close()
+            
+            if labels:
+                # Get or create worksheet
+                try:
+                    worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_ABSOLUTE_TAB)
+                    existing = worksheet.get_all_records()
+                    existing_paths = {row.get('File_Path', '') for row in existing}
+                except:
+                    worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_ABSOLUTE_TAB, rows=1000, cols=10)
+                    worksheet.append_row([
+                        'File_Path', 'File_Name', 'Quality', 'Reconstruction', 
+                        'Reconstruction_Scores', 'Labeler_Name', 'Notes', 'Created_At', 'Updated_At'
+                    ])
+                    existing_paths = set()
+                
+                # Add new rows
+                added = 0
+                for label in labels:
+                    file_path = label.get('file_path', '')
+                    if file_path and file_path not in existing_paths:
+                        row = [
+                            file_path,
+                            label.get('file_name', ''),
+                            label.get('quality', ''),
+                            label.get('reconstruction', ''),
+                            label.get('reconstruction_scores', ''),
+                            label.get('labeler_name', ''),
+                            label.get('notes', ''),
+                            label.get('created_at', '') or datetime.now().isoformat(),
+                            label.get('updated_at', '') or datetime.now().isoformat()
+                        ]
+                        worksheet.append_row(row)
+                        added += 1
+                        existing_paths.add(file_path)
+                
+                print(f"Synced {added} new absolute labels to Google Sheets (total in DB: {len(labels)})")
+            else:
+                print("No absolute labels in database to sync")
+        except Exception as e:
+            import traceback
+            print(f"Error syncing absolute data: {e}\n{traceback.format_exc()}")
+        
+    except Exception as e:
+        import traceback
+        print(f"Error syncing from database: {e}\n{traceback.format_exc()}")
+
 def sync_from_sheets_to_databases():
     """Sync data from Google Sheets to both SQLite and PostgreSQL databases"""
     client = get_google_sheets_client()
