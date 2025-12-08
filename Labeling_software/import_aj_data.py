@@ -135,9 +135,14 @@ def import_aj_data():
                 # Use provided created_at or current time
                 if created_at:
                     try:
-                        # Try to parse the timestamp
-                        from dateutil import parser
-                        created_at_parsed = parser.parse(created_at).isoformat()
+                        # Try to parse the timestamp (format: 2025-12-06 01:24:55)
+                        # Convert to ISO format
+                        created_at_parsed = created_at.replace(' ', 'T')
+                        if 'T' not in created_at_parsed:
+                            created_at_parsed = created_at.replace(' ', 'T')
+                        # Ensure it has timezone info or add it
+                        if '+' not in created_at_parsed and 'Z' not in created_at_parsed:
+                            created_at_parsed += '+00:00'
                     except:
                         created_at_parsed = datetime.now().isoformat()
                 else:
