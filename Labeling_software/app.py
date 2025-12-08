@@ -530,7 +530,7 @@ def save_label():
             
             conn.commit()
             
-            # Sync to Google Sheets if configured
+            # Sync to Google Sheets if configured (before closing connection)
             try:
                 from google_sheets_sync import sync_absolute_to_sheets
                 # Get the saved record to sync
@@ -542,16 +542,25 @@ def save_label():
                 
                 if record:
                     if USE_POSTGRES:
-                        record_dict = dict(record)
+                        from psycopg2.extras import RealDictCursor
+                        # Re-fetch with dict cursor for easier access
+                        dict_cursor = conn.cursor(cursor_factory=RealDictCursor)
+                        dict_cursor.execute('SELECT * FROM labels WHERE file_path = %s', (file_path,))
+                        record_dict = dict(dict_cursor.fetchone())
+                        dict_cursor.close()
                     else:
                         # Convert SQLite row to dict
                         columns = [desc[0] for desc in c.description]
                         record_dict = dict(zip(columns, record))
                     
                     sync_absolute_to_sheets(record_dict)
+            except ImportError:
+                # Google Sheets sync not available, skip silently
+                pass
             except Exception as sync_error:
                 # Don't fail if Google Sheets sync fails
-                print(f"Warning: Google Sheets sync failed: {sync_error}")
+                import traceback
+                print(f"Warning: Google Sheets sync failed: {sync_error}\n{traceback.format_exc()}")
             
             return jsonify({'success': True})
         except Exception as db_error:
@@ -820,9 +829,10 @@ def save_pairwise_comparison():
             
             conn.commit()
             
-            # Sync to Google Sheets if configured
+            # Sync to Google Sheets if configured (before closing connection)
             try:
                 from google_sheets_sync import sync_pairwise_to_sheets
+                from datetime import datetime
                 sync_pairwise_to_sheets({
                     'image1_path': image1_path,
                     'image1_name': image1_name,
@@ -834,9 +844,13 @@ def save_pairwise_comparison():
                     'notes': notes,
                     'created_at': datetime.now().isoformat()
                 })
+            except ImportError:
+                # Google Sheets sync not available, skip silently
+                pass
             except Exception as sync_error:
                 # Don't fail if Google Sheets sync fails
-                print(f"Warning: Google Sheets sync failed: {sync_error}")
+                import traceback
+                print(f"Warning: Google Sheets sync failed: {sync_error}\n{traceback.format_exc()}")
             
             return jsonify({'success': True})
         except Exception as db_error:
