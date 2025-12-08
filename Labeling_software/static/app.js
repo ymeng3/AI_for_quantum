@@ -1083,7 +1083,7 @@ function loadRandomPair() {
 // Save pairwise comparison
 async function savePairwiseComparison(loadNext = false) {
     if (!pairwiseImage1 || !pairwiseImage2) {
-        alert('Please wait for images to load');
+        alert('Please select two images to compare first');
         return;
     }
     
