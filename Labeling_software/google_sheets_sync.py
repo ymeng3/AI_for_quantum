@@ -70,6 +70,14 @@ def sync_pairwise_to_sheets(comparison_data, client=None):
         # Get or create the pairwise tab
         try:
             worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_PAIRWISE_TAB)
+            # Ensure headers exist and are correct
+            headers = worksheet.row_values(1)
+            expected_headers = ['Image1_Path', 'Image1_Name', 'Image2_Path', 'Image2_Name',
+                              'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At']
+            if not headers or headers != expected_headers:
+                # Clear and add correct headers
+                worksheet.clear()
+                worksheet.append_row(expected_headers)
         except:
             worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_PAIRWISE_TAB, rows=1000, cols=10)
             # Add headers
@@ -78,22 +86,26 @@ def sync_pairwise_to_sheets(comparison_data, client=None):
                 'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At'
             ])
         
-        # Append the new row
+        # Append the new row (ensure all 9 columns)
         row = [
-            comparison_data.get('image1_path', ''),
-            comparison_data.get('image1_name', ''),
-            comparison_data.get('image2_path', ''),
-            comparison_data.get('image2_name', ''),
-            comparison_data.get('reconstruction_type', ''),
-            comparison_data.get('winner', ''),
-            comparison_data.get('labeler_name', ''),
-            comparison_data.get('notes', ''),
-            comparison_data.get('created_at', datetime.now().isoformat())
+            str(comparison_data.get('image1_path', '')),
+            str(comparison_data.get('image1_name', '')),
+            str(comparison_data.get('image2_path', '')),
+            str(comparison_data.get('image2_name', '')),
+            str(comparison_data.get('reconstruction_type', '')),
+            str(comparison_data.get('winner', '')),
+            str(comparison_data.get('labeler_name', '')),
+            str(comparison_data.get('notes', '')),
+            str(comparison_data.get('created_at', datetime.now().isoformat()))
         ]
-        worksheet.append_row(row)
+        # Ensure row has exactly 9 values
+        while len(row) < 9:
+            row.append('')
+        worksheet.append_row(row[:9])
         return True
     except Exception as e:
-        print(f"Error syncing to Google Sheets: {e}")
+        import traceback
+        print(f"Error syncing to Google Sheets: {e}\n{traceback.format_exc()}")
         return False
 
 def sync_absolute_to_sheets(label_data, client=None):
@@ -112,6 +124,14 @@ def sync_absolute_to_sheets(label_data, client=None):
         # Get or create the absolute tab
         try:
             worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_ABSOLUTE_TAB)
+            # Ensure headers exist and are correct
+            headers = worksheet.row_values(1)
+            expected_headers = ['File_Path', 'File_Name', 'Quality', 'Reconstruction', 
+                               'Reconstruction_Scores', 'Labeler_Name', 'Notes', 'Created_At', 'Updated_At']
+            if not headers or headers != expected_headers:
+                # Clear and add correct headers
+                worksheet.clear()
+                worksheet.append_row(expected_headers)
         except:
             worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_ABSOLUTE_TAB, rows=1000, cols=10)
             # Add headers
@@ -120,41 +140,50 @@ def sync_absolute_to_sheets(label_data, client=None):
                 'Reconstruction_Scores', 'Labeler_Name', 'Notes', 'Created_At', 'Updated_At'
             ])
         
+        file_path = str(label_data.get('file_path', ''))
+        
         # Check if row exists (by file_path) and update, or append
         try:
-            # Try to find existing row
-            cell = worksheet.find(label_data.get('file_path', ''))
-            # Update existing row
-            row_num = cell.row
+            # Try to find existing row - search in column A (File_Path)
+            all_values = worksheet.get_all_values()
+            row_num = None
+            for i, row in enumerate(all_values, start=1):
+                if i == 1:  # Skip header
+                    continue
+                if len(row) > 0 and row[0] == file_path:
+                    row_num = i
+                    break
+            
+            # Prepare row data (ensure all 9 columns)
             row = [
-                label_data.get('file_path', ''),
-                label_data.get('file_name', ''),
-                label_data.get('quality', ''),
-                label_data.get('reconstruction', ''),
-                label_data.get('reconstruction_scores', ''),
-                label_data.get('labeler_name', ''),
-                label_data.get('notes', ''),
-                label_data.get('created_at', ''),
-                label_data.get('updated_at', datetime.now().isoformat())
+                file_path,
+                str(label_data.get('file_name', '')),
+                str(label_data.get('quality', '')),
+                str(label_data.get('reconstruction', '')),
+                str(label_data.get('reconstruction_scores', '')),
+                str(label_data.get('labeler_name', '')),
+                str(label_data.get('notes', '')),
+                str(label_data.get('created_at', '') or datetime.now().isoformat()),
+                str(label_data.get('updated_at', '') or datetime.now().isoformat())
             ]
-            worksheet.update(f'A{row_num}:I{row_num}', [row])
-        except:
-            # Row doesn't exist, append new one
-            row = [
-                label_data.get('file_path', ''),
-                label_data.get('file_name', ''),
-                label_data.get('quality', ''),
-                label_data.get('reconstruction', ''),
-                label_data.get('reconstruction_scores', ''),
-                label_data.get('labeler_name', ''),
-                label_data.get('notes', ''),
-                label_data.get('created_at', datetime.now().isoformat()),
-                label_data.get('updated_at', datetime.now().isoformat())
-            ]
-            worksheet.append_row(row)
+            # Ensure row has exactly 9 values
+            while len(row) < 9:
+                row.append('')
+            
+            if row_num:
+                # Update existing row
+                worksheet.update(f'A{row_num}:I{row_num}', [row[:9]])
+            else:
+                # Row doesn't exist, append new one
+                worksheet.append_row(row[:9])
+        except Exception as e:
+            import traceback
+            print(f"Error updating row in Google Sheets: {e}\n{traceback.format_exc()}")
+            return False
         return True
     except Exception as e:
-        print(f"Error syncing to Google Sheets: {e}")
+        import traceback
+        print(f"Error syncing to Google Sheets: {e}\n{traceback.format_exc()}")
         return False
 
 def delete_pairwise_from_sheets(image1_path, image2_path, reconstruction_type, client=None):
@@ -224,16 +253,29 @@ def delete_absolute_from_sheets(file_path, client=None):
             # Tab doesn't exist, nothing to delete
             return True
         
-        # Find the row matching the file_path
+        # Find the row matching the file_path (search in column A)
         try:
-            cell = worksheet.find(file_path)
-            worksheet.delete_rows(cell.row)
-            return True
-        except:
-            # Row not found
+            all_values = worksheet.get_all_values()
+            rows_to_delete = []
+            
+            for i, row in enumerate(all_values, start=1):
+                if i == 1:  # Skip header
+                    continue
+                if len(row) > 0 and row[0] == str(file_path):
+                    rows_to_delete.append(i)
+            
+            # Delete rows from bottom to top to maintain indices
+            for row_num in reversed(rows_to_delete):
+                worksheet.delete_rows(row_num)
+            
+            return len(rows_to_delete) > 0
+        except Exception as e:
+            import traceback
+            print(f"Error finding/deleting row in Google Sheets: {e}\n{traceback.format_exc()}")
             return False
     except Exception as e:
-        print(f"Error deleting from Google Sheets: {e}")
+        import traceback
+        print(f"Error deleting from Google Sheets: {e}\n{traceback.format_exc()}")
         return False
 
 def sync_from_database_to_sheets():
@@ -273,11 +315,19 @@ def sync_from_database_to_sheets():
                 # Get or create worksheet
                 try:
                     worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_PAIRWISE_TAB)
+                    # Ensure headers are correct
+                    headers = worksheet.row_values(1)
+                    expected_headers = ['Image1_Path', 'Image1_Name', 'Image2_Path', 'Image2_Name',
+                                      'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At']
+                    if not headers or headers != expected_headers:
+                        # Clear and add correct headers
+                        worksheet.clear()
+                        worksheet.append_row(expected_headers)
                     # Get existing data to avoid duplicates
                     existing = worksheet.get_all_records()
                     existing_keys = set()
                     for row in existing:
-                        key = (row.get('Image1_Path', ''), row.get('Image2_Path', ''), row.get('Reconstruction_Type', ''))
+                        key = (str(row.get('Image1_Path', '')), str(row.get('Image2_Path', '')), str(row.get('Reconstruction_Type', '')))
                         existing_keys.add(key)
                 except:
                     worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_PAIRWISE_TAB, rows=1000, cols=10)
@@ -290,24 +340,27 @@ def sync_from_database_to_sheets():
                 # Add new rows
                 added = 0
                 for comp in comparisons:
-                    key = (comp.get('image1_path', ''), comp.get('image2_path', ''), comp.get('reconstruction_type', ''))
+                    key = (str(comp.get('image1_path', '')), str(comp.get('image2_path', '')), str(comp.get('reconstruction_type', '')))
                     if key not in existing_keys:
                         row = [
-                            comp.get('image1_path', ''),
-                            comp.get('image1_name', ''),
-                            comp.get('image2_path', ''),
-                            comp.get('image2_name', ''),
-                            comp.get('reconstruction_type', ''),
-                            comp.get('winner', ''),
-                            comp.get('labeler_name', ''),
-                            comp.get('notes', ''),
-                            comp.get('created_at', '') or datetime.now().isoformat()
+                            str(comp.get('image1_path', '')),
+                            str(comp.get('image1_name', '')),
+                            str(comp.get('image2_path', '')),
+                            str(comp.get('image2_name', '')),
+                            str(comp.get('reconstruction_type', '')),
+                            str(comp.get('winner', '')),
+                            str(comp.get('labeler_name', '')),
+                            str(comp.get('notes', '')),
+                            str(comp.get('created_at', '') or datetime.now().isoformat())
                         ]
-                        worksheet.append_row(row)
+                        # Ensure row has exactly 9 values
+                        while len(row) < 9:
+                            row.append('')
+                        worksheet.append_row(row[:9])
                         added += 1
                         existing_keys.add(key)
                 
-                print(f"Synced {added} new pairwise comparisons to Google Sheets (total in DB: {len(comparisons)})")
+                print(f"✅ Synced {added} new pairwise comparisons to Google Sheets (total in DB: {len(comparisons)})")
             else:
                 print("No pairwise comparisons in database to sync")
         except Exception as e:
