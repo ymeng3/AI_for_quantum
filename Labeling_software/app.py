@@ -795,6 +795,25 @@ def save_pairwise_comparison():
                 ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
             
             conn.commit()
+            
+            # Sync to Google Sheets if configured
+            try:
+                from google_sheets_sync import sync_pairwise_to_sheets
+                sync_pairwise_to_sheets({
+                    'image1_path': image1_path,
+                    'image1_name': image1_name,
+                    'image2_path': image2_path,
+                    'image2_name': image2_name,
+                    'reconstruction_type': reconstruction_type,
+                    'winner': winner,
+                    'labeler_name': labeler_name,
+                    'notes': notes,
+                    'created_at': datetime.now().isoformat()
+                })
+            except Exception as sync_error:
+                # Don't fail if Google Sheets sync fails
+                print(f"Warning: Google Sheets sync failed: {sync_error}")
+            
             return jsonify({'success': True})
         except Exception as db_error:
             conn.rollback()
