@@ -100,16 +100,29 @@ def restore_all_data():
     
     # Import AJ's data
     print("\n=== Importing AJ's data ===")
+    script_dir = Path(__file__).parent
     aj_csv_paths = [
-        Path(__file__).parent.parent / 'Labeled_data' / 'labeled_data_AJ.csv',
-        Path('/opt/render/project/src/Labeled_data/labeled_data_AJ.csv'),
+        script_dir.parent / 'Labeled_data' / 'labeled_data_AJ.csv',  # ../Labeled_data/
+        script_dir.parent.parent / 'Labeled_data' / 'labeled_data_AJ.csv',  # ../../Labeled_data/
+        Path('/opt/render/project/src/Labeled_data/labeled_data_AJ.csv'),  # Render absolute
+        Path('/opt/render/project/src/Labeling_software/../Labeled_data/labeled_data_AJ.csv'),
+        Path('Labeled_data/labeled_data_AJ.csv'),  # Relative
+        Path('../Labeled_data/labeled_data_AJ.csv'),  # From Labeling_software folder
     ]
     
     aj_csv = None
     for path in aj_csv_paths:
         if path.exists():
             aj_csv = path
+            print(f"   Found AJ CSV at: {path}")
             break
+    
+    if not aj_csv:
+        print("   AJ CSV not found. Tried:")
+        for path in aj_csv_paths:
+            print(f"     - {path}")
+        print(f"   Current directory: {Path.cwd()}")
+        print(f"   Script directory: {script_dir}")
     
     if aj_csv:
         with open(aj_csv, 'r', encoding='utf-8') as f:
