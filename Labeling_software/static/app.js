@@ -902,17 +902,30 @@ function initializePairwiseMode() {
     });
     
     // Mark as Bad checkboxes
-    document.getElementById('markBadImage1').addEventListener('change', async (e) => {
-        if (e.target.checked && pairwiseImage1) {
-            await markImageAsBad(pairwiseImage1, 1);
-        }
-    });
+    const markBad1 = document.getElementById('markBadImage1');
+    const markBad2 = document.getElementById('markBadImage2');
     
-    document.getElementById('markBadImage2').addEventListener('change', async (e) => {
-        if (e.target.checked && pairwiseImage2) {
-            await markImageAsBad(pairwiseImage2, 2);
-        }
-    });
+    if (markBad1) {
+        markBad1.addEventListener('change', async (e) => {
+            if (e.target.checked && pairwiseImage1) {
+                await markImageAsBad(pairwiseImage1, 1);
+            } else if (e.target.checked && !pairwiseImage1) {
+                alert('Please select an image first');
+                e.target.checked = false;
+            }
+        });
+    }
+    
+    if (markBad2) {
+        markBad2.addEventListener('change', async (e) => {
+            if (e.target.checked && pairwiseImage2) {
+                await markImageAsBad(pairwiseImage2, 2);
+            } else if (e.target.checked && !pairwiseImage2) {
+                alert('Please select an image first');
+                e.target.checked = false;
+            }
+        });
+    }
     
     // Pairwise comparison buttons
     document.querySelectorAll('.pairwise-btn').forEach(btn => {
@@ -1003,13 +1016,25 @@ function clearPairwiseImage(slot) {
     if (slot === 1) {
         pairwiseImage1 = null;
         const imgEl = document.getElementById('pairwiseImage1');
-        imgEl.src = '';
-        document.getElementById('pairwiseImage1Info').textContent = 'No image selected';
+        if (imgEl) imgEl.src = '';
+        const infoEl = document.getElementById('pairwiseImage1Info');
+        if (infoEl) infoEl.textContent = 'No image selected';
+        const badCheckbox = document.getElementById('markBadImage1');
+        if (badCheckbox) {
+            badCheckbox.checked = false;
+            badCheckbox.disabled = true; // Disable when no image
+        }
     } else {
         pairwiseImage2 = null;
         const imgEl = document.getElementById('pairwiseImage2');
-        imgEl.src = '';
-        document.getElementById('pairwiseImage2Info').textContent = 'No image selected';
+        if (imgEl) imgEl.src = '';
+        const infoEl = document.getElementById('pairwiseImage2Info');
+        if (infoEl) infoEl.textContent = 'No image selected';
+        const badCheckbox = document.getElementById('markBadImage2');
+        if (badCheckbox) {
+            badCheckbox.checked = false;
+            badCheckbox.disabled = true; // Disable when no image
+        }
     }
     
     // Update visual indicators in grid
@@ -1023,10 +1048,11 @@ function clearPairwiseImage(slot) {
 function setPairwiseImage(slot, img, itemElement) {
     console.log('setPairwiseImage called', slot, img.path);
     
-    // Uncheck the "Mark as Bad" checkbox when setting a new image
+    // Uncheck and enable/disable the "Mark as Bad" checkbox when setting a new image
     const badCheckbox = document.getElementById(`markBadImage${slot}`);
     if (badCheckbox) {
         badCheckbox.checked = false;
+        badCheckbox.disabled = false; // Enable when image is set
     }
     
     if (slot === 1) {
@@ -1052,6 +1078,9 @@ function setPairwiseImage(slot, img, itemElement) {
         if (infoEl) {
             infoEl.textContent = img.name;
         }
+        // Enable the Bad checkbox
+        const badCheckbox1 = document.getElementById('markBadImage1');
+        if (badCheckbox1) badCheckbox1.disabled = false;
     } else if (slot === 2) {
         pairwiseImage2 = img;
         const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
@@ -1075,6 +1104,9 @@ function setPairwiseImage(slot, img, itemElement) {
         if (infoEl) {
             infoEl.textContent = img.name;
         }
+        // Enable the Bad checkbox
+        const badCheckbox2 = document.getElementById('markBadImage2');
+        if (badCheckbox2) badCheckbox2.disabled = false;
     }
     
     // Update visual indicators in grid
