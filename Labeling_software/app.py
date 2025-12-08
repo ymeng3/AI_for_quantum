@@ -940,6 +940,23 @@ def delete_pairwise_comparison(comp_id):
     conn = get_db_connection()
     c = conn.cursor()
     
+    # Get the record before deleting (for Google Sheets sync)
+    if USE_POSTGRES:
+        from psycopg2.extras import RealDictCursor
+        dict_cursor = conn.cursor(cursor_factory=RealDictCursor)
+        dict_cursor.execute('SELECT * FROM pairwise_comparisons WHERE id = %s', (comp_id,))
+        record = dict_cursor.fetchone()
+        dict_cursor.close()
+    else:
+        c.execute('PRAGMA table_info(pairwise_comparisons)')
+        columns = [row[1] for row in c.fetchall()]
+        c.execute('SELECT * FROM pairwise_comparisons WHERE id = ?', (comp_id,))
+        row = c.fetchone()
+        if row:
+            record = dict(zip(columns, row))
+        else:
+            record = None
+    
     if USE_POSTGRES:
         c.execute('DELETE FROM pairwise_comparisons WHERE id = %s', (comp_id,))
     else:
@@ -947,6 +964,22 @@ def delete_pairwise_comparison(comp_id):
     
     deleted = c.rowcount
     conn.commit()
+    
+    # Delete from Google Sheets if configured
+    if deleted > 0 and record:
+        try:
+            from google_sheets_sync import delete_pairwise_from_sheets
+            delete_pairwise_from_sheets(
+                record.get('image1_path', ''),
+                record.get('image2_path', ''),
+                record.get('reconstruction_type', '')
+            )
+        except ImportError:
+            pass
+        except Exception as sync_error:
+            import traceback
+            print(f"Warning: Google Sheets delete failed: {sync_error}\n{traceback.format_exc()}")
+    
     conn.close()
     
     if deleted > 0:
