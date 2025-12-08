@@ -529,6 +529,30 @@ def save_label():
                     ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
             
             conn.commit()
+            
+            # Sync to Google Sheets if configured
+            try:
+                from google_sheets_sync import sync_absolute_to_sheets
+                # Get the saved record to sync
+                if USE_POSTGRES:
+                    c.execute('SELECT * FROM labels WHERE file_path = %s', (file_path,))
+                else:
+                    c.execute('SELECT * FROM labels WHERE file_path = ?', (file_path,))
+                record = c.fetchone()
+                
+                if record:
+                    if USE_POSTGRES:
+                        record_dict = dict(record)
+                    else:
+                        # Convert SQLite row to dict
+                        columns = [desc[0] for desc in c.description]
+                        record_dict = dict(zip(columns, record))
+                    
+                    sync_absolute_to_sheets(record_dict)
+            except Exception as sync_error:
+                # Don't fail if Google Sheets sync fails
+                print(f"Warning: Google Sheets sync failed: {sync_error}")
+            
             return jsonify({'success': True})
         except Exception as db_error:
             conn.rollback()
