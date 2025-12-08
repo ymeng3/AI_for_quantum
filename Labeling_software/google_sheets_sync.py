@@ -294,7 +294,31 @@ def sync_from_database_to_sheets():
     print(f"✅ Connected to Google Sheets (Spreadsheet ID: {GOOGLE_SHEETS_SPREADSHEET_ID[:20]}...)")
     print()
     
-    from app import get_db_connection, USE_POSTGRES
+    # Check DATABASE_URL explicitly and connect directly to PostgreSQL
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        print("❌ ERROR: DATABASE_URL not set!")
+        print("   This script needs to connect to PostgreSQL on Render.")
+        return
+    
+    print(f"✅ DATABASE_URL found: {database_url[:30]}...")
+    
+    # Connect directly to PostgreSQL (don't rely on app.py's connection)
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        print("✅ Connecting directly to PostgreSQL...")
+        USE_POSTGRES = True
+    except ImportError:
+        print("❌ ERROR: psycopg2 not installed!")
+        return
+    
+    def get_db_connection():
+        """Get PostgreSQL connection directly"""
+        return psycopg2.connect(database_url, sslmode='require')
+    
+    print("✅ Using PostgreSQL database")
+    print()
     
     try:
         print("Opening spreadsheet...")
