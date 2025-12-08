@@ -234,13 +234,38 @@ function renderImageGrid(filter = 'all') {
     }
     
     let filteredImages = images;
-    if (filter === 'labeled') {
+    
+    // In pairwise mode, exclude images labeled as "Bad"
+    if (currentMode === 'pairwise') {
         filteredImages = images.filter(img => {
+            const label = labels[img.path];
+            if (!label || !label.reconstruction) {
+                return true; // No label, include it
+            }
+            // Check if reconstruction contains "Bad"
+            let reconstruction = label.reconstruction;
+            if (typeof reconstruction === 'string') {
+                try {
+                    reconstruction = JSON.parse(reconstruction);
+                } catch (e) {
+                    // Not JSON, treat as string
+                    reconstruction = [reconstruction];
+                }
+            }
+            if (Array.isArray(reconstruction)) {
+                return !reconstruction.includes('Bad');
+            }
+            return reconstruction !== 'Bad';
+        });
+    }
+    
+    if (filter === 'labeled') {
+        filteredImages = filteredImages.filter(img => {
             const label = labels[img.path];
             return label && (label.quality || label.reconstruction);
         });
     } else if (filter === 'unlabeled') {
-        filteredImages = images.filter(img => {
+        filteredImages = filteredImages.filter(img => {
             const label = labels[img.path];
             return !label || (!label.quality && !label.reconstruction);
         });
@@ -857,6 +882,9 @@ function switchMode(mode) {
     document.getElementById('absoluteMode').style.display = mode === 'absolute' ? 'flex' : 'none';
     document.getElementById('pairwiseMode').style.display = mode === 'pairwise' ? 'block' : 'none';
     
+    // Re-render image grid to apply Bad filter in pairwise mode
+    renderImageGrid(document.getElementById('filterSelect').value);
+    
     // Don't auto-load random pair - let user select manually
     // User can click "Random Pair" button if they want random selection
 }
@@ -919,6 +947,12 @@ function initializePairwiseMode() {
 
 // Select image for pairwise comparison (manual selection)
 function selectImageForPairwise(img, itemElement) {
+    // Don't allow selecting images labeled as "Bad"
+    if (isImageBad(img.path)) {
+        alert('This image is labeled as "Bad" and cannot be used in pairwise comparisons');
+        return;
+    }
+    
     console.log('selectImageForPairwise called', img.path, 'Image1:', pairwiseImage1?.path, 'Image2:', pairwiseImage2?.path);
     
     // Check if clicking on an already selected image (toggle/deselect)
@@ -1045,25 +1079,51 @@ function updatePairwiseImageIndicators() {
     });
 }
 
+// Helper function to check if image is labeled as "Bad"
+function isImageBad(imgPath) {
+    const label = labels[imgPath];
+    if (!label || !label.reconstruction) {
+        return false;
+    }
+    let reconstruction = label.reconstruction;
+    if (typeof reconstruction === 'string') {
+        try {
+            reconstruction = JSON.parse(reconstruction);
+        } catch (e) {
+            reconstruction = [reconstruction];
+        }
+    }
+    if (Array.isArray(reconstruction)) {
+        return reconstruction.includes('Bad');
+    }
+    return reconstruction === 'Bad';
+}
+
 // Load a random pair of images for comparison
 function loadRandomPair() {
-    if (images.length < 2) {
-        alert('Need at least 2 images for pairwise comparison');
+    // Filter out "Bad" images
+    const validImages = images.filter(img => !isImageBad(img.path));
+    
+    if (validImages.length < 2) {
+        alert('Need at least 2 non-"Bad" images for pairwise comparison');
         return;
     }
     
-    // Select two random different images
-    let idx1 = Math.floor(Math.random() * images.length);
-    let idx2 = Math.floor(Math.random() * images.length);
+    // Select two random different images from valid images
+    let idx1 = Math.floor(Math.random() * validImages.length);
+    let idx2 = Math.floor(Math.random() * validImages.length);
     while (idx2 === idx1) {
-        idx2 = Math.floor(Math.random() * images.length);
+        idx2 = Math.floor(Math.random() * validImages.length);
     }
     
-    const item1 = document.querySelector(`.image-item[data-path="${images[idx1].path}"]`);
-    const item2 = document.querySelector(`.image-item[data-path="${images[idx2].path}"]`);
+    const img1 = validImages[idx1];
+    const img2 = validImages[idx2];
     
-    setPairwiseImage(1, images[idx1], item1);
-    setPairwiseImage(2, images[idx2], item2);
+    const item1 = document.querySelector(`.image-item[data-path="${img1.path}"]`);
+    const item2 = document.querySelector(`.image-item[data-path="${img2.path}"]`);
+    
+    setPairwiseImage(1, img1, item1);
+    setPairwiseImage(2, img2, item2);
     
     // Force resize to ensure both images are same size
     setTimeout(() => {
