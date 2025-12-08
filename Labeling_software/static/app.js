@@ -1099,16 +1099,19 @@ function selectImageForPairwise(img, itemElement) {
     }
     
     // Determine which image slot to fill
-    // If both are empty, fill Image 1
-    // If Image 1 is empty but Image 2 is filled, fill Image 1
-    // If Image 2 is empty but Image 1 is filled, fill Image 2
-    // If both are filled, replace Image 2 (most recently selected)
-    if (!pairwiseImage1) {
+    // Priority: Fill empty slots first (Image 1, then Image 2)
+    // If both are filled, replace Image 2
+    if (!pairwiseImage1 && !pairwiseImage2) {
+        // Both empty - fill Image 1 first
+        setPairwiseImage(1, img, itemElement);
+    } else if (!pairwiseImage1) {
+        // Image 1 empty, Image 2 filled - fill Image 1
         setPairwiseImage(1, img, itemElement);
     } else if (!pairwiseImage2) {
+        // Image 1 filled, Image 2 empty - fill Image 2
         setPairwiseImage(2, img, itemElement);
     } else {
-        // Both filled - replace Image 2 (the second one)
+        // Both filled - replace Image 2
         setPairwiseImage(2, img, itemElement);
     }
 }
