@@ -280,19 +280,36 @@ def delete_absolute_from_sheets(file_path, client=None):
 
 def sync_from_database_to_sheets():
     """Sync existing data from database to Google Sheets (one-time migration)"""
+    print("Connecting to Google Sheets...")
     client = get_google_sheets_client()
-    if not client or not GOOGLE_SHEETS_SPREADSHEET_ID:
-        print("Google Sheets not configured")
+    if not client:
+        print("❌ ERROR: Could not authenticate with Google Sheets")
+        print("   Check your GOOGLE_SHEETS_CREDENTIALS_JSON")
         return
+    
+    if not GOOGLE_SHEETS_SPREADSHEET_ID:
+        print("❌ ERROR: GOOGLE_SHEETS_SPREADSHEET_ID not set")
+        return
+    
+    print(f"✅ Connected to Google Sheets (Spreadsheet ID: {GOOGLE_SHEETS_SPREADSHEET_ID[:20]}...)")
+    print()
     
     from app import get_db_connection, USE_POSTGRES
     
     try:
+        print("Opening spreadsheet...")
         spreadsheet = client.open_by_key(GOOGLE_SHEETS_SPREADSHEET_ID)
+        print("✅ Spreadsheet opened")
+        print()
         
         # Sync pairwise comparisons
+        print("=== Syncing Pairwise Comparisons ===")
         try:
+            print("Connecting to database...")
             conn = get_db_connection()
+            print(f"✅ Connected to {'PostgreSQL' if USE_POSTGRES else 'SQLite'} database")
+            
+            print("Fetching pairwise comparisons from database...")
             if USE_POSTGRES:
                 from psycopg2.extras import RealDictCursor
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -310,6 +327,7 @@ def sync_from_database_to_sheets():
                         comp_dict[col] = row[i]
                     comparisons.append(comp_dict)
             conn.close()
+            print(f"✅ Found {len(comparisons)} pairwise comparisons in database")
             
             if comparisons:
                 # Get or create worksheet
@@ -368,8 +386,14 @@ def sync_from_database_to_sheets():
             print(f"Error syncing pairwise data: {e}\n{traceback.format_exc()}")
         
         # Sync absolute scoring
+        print()
+        print("=== Syncing Absolute Scoring Labels ===")
         try:
+            print("Connecting to database...")
             conn = get_db_connection()
+            print(f"✅ Connected to {'PostgreSQL' if USE_POSTGRES else 'SQLite'} database")
+            
+            print("Fetching absolute labels from database...")
             if USE_POSTGRES:
                 from psycopg2.extras import RealDictCursor
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -387,6 +411,7 @@ def sync_from_database_to_sheets():
                         label_dict[col] = row[i]
                     labels.append(label_dict)
             conn.close()
+            print(f"✅ Found {len(labels)} absolute labels in database")
             
             if labels:
                 # Get or create worksheet
