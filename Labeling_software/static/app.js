@@ -901,6 +901,19 @@ function initializePairwiseMode() {
         pairwiseNotes = e.target.value;
     });
     
+    // Mark as Bad checkboxes
+    document.getElementById('markBadImage1').addEventListener('change', async (e) => {
+        if (e.target.checked && pairwiseImage1) {
+            await markImageAsBad(pairwiseImage1, 1);
+        }
+    });
+    
+    document.getElementById('markBadImage2').addEventListener('change', async (e) => {
+        if (e.target.checked && pairwiseImage2) {
+            await markImageAsBad(pairwiseImage2, 2);
+        }
+    });
+    
     // Pairwise comparison buttons
     document.querySelectorAll('.pairwise-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1010,6 +1023,12 @@ function clearPairwiseImage(slot) {
 function setPairwiseImage(slot, img, itemElement) {
     console.log('setPairwiseImage called', slot, img.path);
     
+    // Uncheck the "Mark as Bad" checkbox when setting a new image
+    const badCheckbox = document.getElementById(`markBadImage${slot}`);
+    if (badCheckbox) {
+        badCheckbox.checked = false;
+    }
+    
     if (slot === 1) {
         pairwiseImage1 = img;
         const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
@@ -1097,6 +1116,72 @@ function isImageBad(imgPath) {
         return reconstruction.includes('Bad');
     }
     return reconstruction === 'Bad';
+}
+
+// Mark an image as "Bad" and replace it with a random non-Bad image
+async function markImageAsBad(img, slot) {
+    if (!pairwiseLabelerName) {
+        alert('Please enter your name before marking an image as Bad');
+        document.getElementById(`markBadImage${slot}`).checked = false;
+        return;
+    }
+    
+    try {
+        // Save the image as "Bad" label
+        const response = await fetch('/api/labels', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_path: img.path,
+                file_name: img.name,
+                quality: null,
+                reconstruction: ['Bad'],
+                reconstruction_scores: null,
+                labeler_name: pairwiseLabelerName,
+                notes: 'Marked as Bad in pairwise mode'
+            })
+        });
+        
+        if (response.ok) {
+            // Reload labels to update the filter
+            await loadLabels();
+            
+            // Find a random non-Bad image to replace it
+            const validImages = images.filter(i => !isImageBad(i.path) && i.path !== img.path);
+            
+            if (validImages.length === 0) {
+                alert('No more non-Bad images available to replace this one');
+                document.getElementById(`markBadImage${slot}`).checked = false;
+                return;
+            }
+            
+            // Select a random image
+            const randomIdx = Math.floor(Math.random() * validImages.length);
+            const newImg = validImages[randomIdx];
+            
+            // Find the item element in the grid
+            const item = document.querySelector(`.image-item[data-path="${newImg.path}"]`);
+            
+            // Replace the image
+            setPairwiseImage(slot, newImg, item);
+            
+            // Uncheck the checkbox
+            document.getElementById(`markBadImage${slot}`).checked = false;
+            
+            // Show a brief message
+            console.log(`Image ${slot} marked as Bad and replaced with ${newImg.name}`);
+        } else {
+            const error = await response.json();
+            alert('Error marking image as Bad: ' + (error.error || 'Unknown error'));
+            document.getElementById(`markBadImage${slot}`).checked = false;
+        }
+    } catch (error) {
+        console.error('Error marking image as Bad:', error);
+        alert('Error marking image as Bad: ' + error.message);
+        document.getElementById(`markBadImage${slot}`).checked = false;
+    }
 }
 
 // Load a random pair of images for comparison
