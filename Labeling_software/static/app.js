@@ -915,7 +915,9 @@ function initializePairwiseMode() {
     
     if (markBad1) {
         const handler1 = async (e) => {
+            console.log('Bad checkbox 1 clicked:', e.target.checked, 'pairwiseImage1:', !!pairwiseImage1);
             if (e.target.checked && pairwiseImage1) {
+                console.log('Calling markImageAsBad for image 1');
                 await markImageAsBad(pairwiseImage1, 1);
             } else if (e.target.checked && !pairwiseImage1) {
                 alert('Please select an image first');
@@ -924,11 +926,16 @@ function initializePairwiseMode() {
         };
         markBad1._badListener = handler1;
         markBad1.addEventListener('change', handler1);
+        console.log('Bad checkbox 1 event listener attached');
+    } else {
+        console.error('markBadImage1 not found!');
     }
     
     if (markBad2) {
         const handler2 = async (e) => {
+            console.log('Bad checkbox 2 clicked:', e.target.checked, 'pairwiseImage2:', !!pairwiseImage2);
             if (e.target.checked && pairwiseImage2) {
+                console.log('Calling markImageAsBad for image 2');
                 await markImageAsBad(pairwiseImage2, 2);
             } else if (e.target.checked && !pairwiseImage2) {
                 alert('Please select an image first');
@@ -937,6 +944,9 @@ function initializePairwiseMode() {
         };
         markBad2._badListener = handler2;
         markBad2.addEventListener('change', handler2);
+        console.log('Bad checkbox 2 event listener attached');
+    } else {
+        console.error('markBadImage2 not found!');
     }
     
     // Pairwise comparison buttons
@@ -1164,6 +1174,8 @@ function isImageBad(imgPath) {
 
 // Mark an image as "Bad" and replace it with a random non-Bad image
 async function markImageAsBad(img, slot) {
+    console.log('markImageAsBad called:', { slot, imgPath: img?.path, labelerName: pairwiseLabelerName });
+    
     if (!pairwiseLabelerName) {
         alert('Please enter your name before marking an image as Bad');
         const checkbox = document.getElementById(`markBadImage${slot}`);
@@ -1179,6 +1191,7 @@ async function markImageAsBad(img, slot) {
     }
     
     try {
+        console.log('Sending Bad label request for:', img.path);
         // Save the image as "Bad" label
         const response = await fetch('/api/labels', {
             method: 'POST',
@@ -1197,10 +1210,12 @@ async function markImageAsBad(img, slot) {
         });
         
         if (response.ok) {
+            console.log('Bad label saved successfully');
             // Update local labels cache immediately without full reload
             const labelData = await response.json();
             if (labelData && labelData.id) {
                 labels[img.path] = labelData;
+                console.log('Updated local labels cache');
             }
             
             // Update image grid status without full reload
@@ -1208,6 +1223,7 @@ async function markImageAsBad(img, slot) {
             
             // Find a random non-Bad image to replace it
             const validImages = images.filter(i => !isImageBad(i.path) && i.path !== img.path);
+            console.log(`Found ${validImages.length} valid replacement images`);
             
             if (validImages.length === 0) {
                 alert('No more non-Bad images available to replace this one');
@@ -1219,6 +1235,7 @@ async function markImageAsBad(img, slot) {
             // Select a random image
             const randomIdx = Math.floor(Math.random() * validImages.length);
             const newImg = validImages[randomIdx];
+            console.log(`Replacing with: ${newImg.name}`);
             
             // Find the item element in the grid
             const item = document.querySelector(`.image-item[data-path="${newImg.path}"]`);
@@ -1228,9 +1245,15 @@ async function markImageAsBad(img, slot) {
             
             // Uncheck the checkbox
             const checkbox = document.getElementById(`markBadImage${slot}`);
-            if (checkbox) checkbox.checked = false;
+            if (checkbox) {
+                checkbox.checked = false;
+                console.log('Checkbox unchecked');
+            }
+            
+            console.log('✅ Image marked as Bad and replaced successfully');
         } else {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Error saving Bad label:', errorData);
             alert('Error marking image as Bad: ' + (errorData.error || 'Unknown error'));
             const checkbox = document.getElementById(`markBadImage${slot}`);
             if (checkbox) checkbox.checked = false;
@@ -1238,7 +1261,8 @@ async function markImageAsBad(img, slot) {
     } catch (error) {
         console.error('Error marking image as Bad:', error);
         alert('Error marking image as Bad: ' + error.message);
-        document.getElementById(`markBadImage${slot}`).checked = false;
+        const checkbox = document.getElementById(`markBadImage${slot}`);
+        if (checkbox) checkbox.checked = false;
     }
 }
 
@@ -1342,6 +1366,12 @@ async function savePairwiseComparison(loadNext = false) {
         if (errors.length === 0) {
             // Reload pairwise comparisons to update table
             await loadPairwiseComparisons();
+            
+            // Clear the current comparison
+            clearPairwiseComparison();
+            
+            // Load a new random pair
+            loadRandomPair();
             
             alert('Comparison saved successfully!');
         } else {
