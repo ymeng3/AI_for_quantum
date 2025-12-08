@@ -34,7 +34,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial button visibility based on default mode
     document.getElementById('randomBtn').style.display = currentMode === 'absolute' ? 'block' : 'none';
     document.getElementById('pairwiseRandomBtn').style.display = currentMode === 'pairwise' ? 'block' : 'none';
+    
+    // Create notification container
+    const notificationContainer = document.createElement('div');
+    notificationContainer.id = 'notificationContainer';
+    document.body.appendChild(notificationContainer);
 });
+
+// Show a notification message
+function showNotification(message, duration = 3000) {
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
+    
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    container.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Remove after duration
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, duration);
+}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -342,12 +371,20 @@ function renderImageGrid(filter = 'all') {
         if (label && label.reconstruction) {
             try {
                 const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
-                if (Array.isArray(recon) && recon.length > 0) {
+                if (Array.isArray(recon)) {
+                    if (recon.includes('Bad')) {
+                        badge.textContent = 'Bad';
+                        badge.classList.add('bad');
+                    } else if (recon.length > 0) {
+                        badge.textContent = '✓';
+                        badge.classList.add('labeled');
+                    }
+                } else if (recon === 'Bad') {
+                    badge.textContent = 'Bad';
+                    badge.classList.add('bad');
+                } else if (recon) {
                     badge.textContent = '✓';
                     badge.classList.add('labeled');
-                } else if (recon) {
-            badge.textContent = '✓';
-            badge.classList.add('labeled');
                 }
             } catch {
                 // Ignore parse errors
@@ -456,20 +493,40 @@ function updateImageGridStatus() {
         if (label && label.reconstruction) {
             try {
                 const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
-                if (Array.isArray(recon) && recon.length > 0) {
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'status-badge';
-                item.appendChild(badge);
-            }
-            badge.textContent = '✓';
-            badge.className = 'status-badge labeled';
+                if (Array.isArray(recon)) {
+                    if (recon.includes('Bad')) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'status-badge';
+                            item.appendChild(badge);
+                        }
+                        badge.textContent = 'Bad';
+                        badge.className = 'status-badge bad';
+                    } else if (recon.length > 0) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'status-badge';
+                            item.appendChild(badge);
+                        }
+                        badge.textContent = '✓';
+                        badge.className = 'status-badge labeled';
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                } else if (recon === 'Bad') {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge';
+                        item.appendChild(badge);
+                    }
+                    badge.textContent = 'Bad';
+                    badge.className = 'status-badge bad';
                 } else if (recon) {
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'status-badge';
-                item.appendChild(badge);
-            }
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge';
+                        item.appendChild(badge);
+                    }
                     badge.textContent = '✓';
                     badge.className = 'status-badge labeled';
                 } else if (badge) {
@@ -1245,6 +1302,9 @@ async function markImageAsBad(img, slot) {
                 checkbox.checked = false;
                 checkbox.disabled = false;
             }
+            
+            // Show notification
+            showNotification(`Image marked as "Bad" and replaced with ${newImg.name}`);
         } else {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
             alert('Error marking image as Bad: ' + (errorData.error || 'Unknown error'));
