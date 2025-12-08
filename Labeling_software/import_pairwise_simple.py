@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """
-Script to import pairwise comparison data from CSV into Render PostgreSQL database.
-This connects to your Render database using the DATABASE_URL environment variable.
+Simplified script to import pairwise data - reads DATABASE_URL from app.py logic
 """
 
 import csv
 import os
+import sys
 from pathlib import Path
 from datetime import datetime
 
+# Add parent directory to path to import app
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Import database connection from app
+from app import get_db_connection, USE_POSTGRES
+
 def find_image_path(image_name):
-    """Find the full path for an image by searching in Trajectories folders"""
-    # Files seem to be from 2022-02-04, 2022-02-06, 2022-04-11
+    """Find the full path for an image"""
     if "RR220204" in image_name:
         return f"Trajectories/2022-02-04/{image_name}"
     elif "RR220206" in image_name:
@@ -19,7 +24,6 @@ def find_image_path(image_name):
     elif "RR220411" in image_name:
         return f"Trajectories/2022-04-11/{image_name}"
     else:
-        # Default to 2022-02-04 if we can't determine
         return f"Trajectories/2022-02-04/{image_name}"
 
 def convert_winner(winner_str):
@@ -37,59 +41,47 @@ def convert_winner(winner_str):
         print(f"Warning: Unknown winner value '{winner_str}', defaulting to 'tie'")
         return "tie"
 
-def import_pairwise_to_render(csv_file='label_pairs.csv'):
-    """Import pairwise comparison data from CSV to Render PostgreSQL database"""
-    csv_path = Path(__file__).parent / csv_file
+def import_pairwise_data():
+    """Import pairwise comparison data from CSV"""
+    csv_path = Path(__file__).parent / 'label_pairs.csv'
     
     if not csv_path.exists():
         print(f"Error: CSV file not found at {csv_path}")
         return
     
-    # Get DATABASE_URL from environment
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        # Try to get it from Render's environment or check if we're in Render
-        # Render sets DATABASE_URL automatically, but in shell it might not be loaded
-        print("Error: DATABASE_URL environment variable not set!")
-        print("\nTo get your DATABASE_URL:")
-        print("1. Go to Render Dashboard -> Your Web Service -> Environment")
-        print("2. Look for DATABASE_URL in the environment variables")
-        print("3. Or go to your PostgreSQL database service -> 'Connections' tab")
-        print("4. Copy the 'Internal Database URL' or 'External Database URL'")
-        print("\nThen run:")
-        print("  export DATABASE_URL='your-postgresql-url'")
-        print("  python3 import_pairwise_to_render.py")
-        return
-    
+    # Use the same database connection as the app
     try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError:
-        print("Error: psycopg2 not installed. Install it with: pip install psycopg2-binary")
-        return
-    
-    # Connect to PostgreSQL
-    try:
-        conn = psycopg2.connect(database_url, sslmode='require')
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        print("✅ Connected to Render PostgreSQL database")
+        conn = get_db_connection()
+        if USE_POSTGRES:
+            from psycopg2.extras import RealDictCursor
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+        else:
+            cursor = conn.cursor()
+        print("✅ Connected to database")
     except Exception as e:
         print(f"Error connecting to database: {e}")
+        print("\nMake sure DATABASE_URL is set in Render environment variables")
         return
     
     # Verify table exists
     try:
-        cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'pairwise_comparisons'
-            );
-        """)
-        table_exists = cursor.fetchone()[0]
+        if USE_POSTGRES:
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'pairwise_comparisons'
+                );
+            """)
+            table_exists = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='pairwise_comparisons'
+            """)
+            table_exists = cursor.fetchone() is not None
         
         if not table_exists:
             print("Error: pairwise_comparisons table does not exist!")
-            print("Please run the app first to create the table.")
             conn.close()
             return
     except Exception as e:
@@ -105,7 +97,7 @@ def import_pairwise_to_render(csv_file='label_pairs.csv'):
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         
-        for row_num, row in enumerate(reader, start=2):  # Start at 2 because row 1 is header
+        for row_num, row in enumerate(reader, start=2):
             try:
                 image1_name = row['IMAGE 1'].strip()
                 image2_name = row['IMAGE 2'].strip()
@@ -114,21 +106,27 @@ def import_pairwise_to_render(csv_file='label_pairs.csv'):
                 labeler = row['LABELER'].strip() if row.get('LABELER') else ''
                 notes = row['NOTES'].strip() if row.get('NOTES') and row['NOTES'].strip() != '-' else ''
                 
-                # Convert winner
                 winner = convert_winner(winner_str)
-                
-                # Find image paths
                 image1_path = find_image_path(image1_name)
                 image2_path = find_image_path(image2_name)
                 
                 # Insert into database
-                cursor.execute('''
-                    INSERT INTO pairwise_comparisons 
-                    (image1_path, image1_name, image2_path, image2_name, 
-                     reconstruction_type, winner, labeler_name, notes, created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (image1_path, image1_name, image2_path, image2_name, 
-                      reconstruction, winner, labeler, notes, datetime.now().isoformat()))
+                if USE_POSTGRES:
+                    cursor.execute('''
+                        INSERT INTO pairwise_comparisons 
+                        (image1_path, image1_name, image2_path, image2_name, 
+                         reconstruction_type, winner, labeler_name, notes, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (image1_path, image1_name, image2_path, image2_name, 
+                          reconstruction, winner, labeler, notes, datetime.now().isoformat()))
+                else:
+                    cursor.execute('''
+                        INSERT INTO pairwise_comparisons 
+                        (image1_path, image1_name, image2_path, image2_name, 
+                         reconstruction_type, winner, labeler_name, notes, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (image1_path, image1_name, image2_path, image2_name, 
+                          reconstruction, winner, labeler, notes, datetime.now().isoformat()))
                 
                 imported_count += 1
                 
@@ -149,7 +147,7 @@ def import_pairwise_to_render(csv_file='label_pairs.csv'):
     
     if errors:
         print(f"\n⚠️  Errors encountered:")
-        for error in errors[:10]:  # Show first 10 errors
+        for error in errors[:10]:
             print(f"   {error}")
         if len(errors) > 10:
             print(f"   ... and {len(errors) - 10} more errors")
@@ -157,7 +155,7 @@ def import_pairwise_to_render(csv_file='label_pairs.csv'):
     conn.close()
 
 if __name__ == '__main__':
-    print("Importing pairwise comparison data to Render PostgreSQL database...")
+    print("Importing pairwise comparison data...")
     print("=" * 60)
-    import_pairwise_to_render()
+    import_pairwise_data()
 
