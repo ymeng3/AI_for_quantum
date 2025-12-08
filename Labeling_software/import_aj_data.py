@@ -32,8 +32,28 @@ def convert_winner(winner_str):
 
 def import_aj_data():
     """Import AJ's pairwise comparison data from CSV"""
-    # CSV is in Labeled_data folder (parent directory)
-    csv_path = Path(__file__).parent.parent / 'Labeled_data' / 'labeled_data_AJ.csv'
+    # CSV is in Labeled_data folder - try multiple possible paths
+    script_dir = Path(__file__).parent
+    possible_paths = [
+        script_dir.parent / 'Labeled_data' / 'labeled_data_AJ.csv',  # ../Labeled_data/
+        script_dir.parent.parent / 'Labeled_data' / 'labeled_data_AJ.csv',  # ../../Labeled_data/
+        Path('/opt/render/project/src/Labeled_data/labeled_data_AJ.csv'),  # Render absolute path
+        Path('Labeled_data/labeled_data_AJ.csv'),  # Relative from project root
+    ]
+    
+    csv_path = None
+    for path in possible_paths:
+        if path.exists():
+            csv_path = path
+            break
+    
+    if not csv_path:
+        print("Error: CSV file not found. Tried:")
+        for path in possible_paths:
+            print(f"  - {path}")
+        print(f"\nCurrent directory: {Path.cwd()}")
+        print(f"Script directory: {script_dir}")
+        return
     
     if not csv_path.exists():
         print(f"Error: CSV file not found at {csv_path}")
