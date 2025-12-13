@@ -663,132 +663,61 @@ def delete_label(file_path):
 
 @app.route('/api/labels/export', methods=['GET'])
 def export_labels():
-    """Export all labels as CSV"""
+    """Export all labels as CSV - matching Google Sheets format"""
     conn = get_db_connection()
-    
-    # First, check what columns exist in the database
-    if USE_POSTGRES:
-        c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'labels'
-        """)
-        available_columns = [row['column_name'] for row in c.fetchall()]
-    else:
-        c = conn.cursor()
-        c.execute('PRAGMA table_info(labels)')
-        available_columns = [row[1] for row in c.fetchall()]
-    
-    # Build SELECT query with only existing columns
-    base_columns = ['file_name', 'quality', 'reconstruction']
-    optional_columns = ['reconstruction_scores', 'labeler_name', 'notes', 'file_path', 'created_at', 'updated_at']
-    
-    select_columns = []
-    for col in base_columns + optional_columns:
-        if col in available_columns:
-            select_columns.append(col)
-    
-    if not select_columns:
+
+    try:
+        # Get all labels
+        if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute('SELECT * FROM labels ORDER BY created_at DESC')
+            labels = [dict(row) for row in c.fetchall()]
+        else:
+            c = conn.cursor()
+            c.execute('PRAGMA table_info(labels)')
+            columns = [row[1] for row in c.fetchall()]
+            c.execute('SELECT * FROM labels ORDER BY created_at DESC')
+            labels = []
+            for row in c.fetchall():
+                label_dict = {}
+                for i, col in enumerate(columns):
+                    label_dict[col] = row[i]
+                labels.append(label_dict)
+
         conn.close()
-        return 'No data available', 404
-    
-    # Execute query
-    query = f'SELECT {", ".join(select_columns)} FROM labels ORDER BY file_name'
-    if USE_POSTGRES:
-        c.execute(query)
-        labels = [dict(row) for row in c.fetchall()]
-    else:
-        c.execute(query)
-        # Convert to list of dicts
-        labels = []
-        for row in c.fetchall():
-            label_dict = {}
-            for i, col in enumerate(select_columns):
-                label_dict[col] = row[i]
-            labels.append(label_dict)
-    
-    conn.close()
-    
-    # Generate CSV header - include all available columns
-    csv_header = ['File', 'Quality', 'Reconstruction']
-    if 'reconstruction_scores' in select_columns:
-        csv_header.append('Reconstruction_Scores')
-    if 'labeler_name' in select_columns:
-        csv_header.append('Labeler_Name')
-    if 'notes' in select_columns:
-        csv_header.append('Notes')
-    if 'file_path' in select_columns:
-        csv_header.append('File_Path')
-    if 'created_at' in select_columns:
-        csv_header.append('Created_At')
-    if 'updated_at' in select_columns:
-        csv_header.append('Updated_At')
-    
-    csv_lines = [','.join(csv_header)]
-    
-    for label in labels:
-        row_data = []
-        
-        # File name (required)
-        file_name = label.get('file_name', '-')
-        row_data.append(file_name)
-        
-        # Quality
-        quality = label.get('quality') or '-'
-        row_data.append(quality)
-        
-        # Reconstruction (can be JSON list or single value)
-        reconstruction = label.get('reconstruction') or '-'
-        if reconstruction and reconstruction != '-':
-            try:
-                recon_list = json.loads(reconstruction) if isinstance(reconstruction, str) else reconstruction
-                if isinstance(recon_list, list):
-                    reconstruction = '; '.join(recon_list)
-            except:
-                pass
-        # Escape quotes for CSV
-        reconstruction_escaped = reconstruction.replace('"', '""') if reconstruction != '-' else '-'
-        row_data.append(f'"{reconstruction_escaped}"')
-        
-        # Optional columns
-        if 'reconstruction_scores' in select_columns:
-            scores = label.get('reconstruction_scores') or '-'
-            if scores and scores != '-':
-                try:
-                    scores_dict = json.loads(scores) if isinstance(scores, str) else scores
-                    if isinstance(scores_dict, dict):
-                        scores = '; '.join([f"{k}: {v}" for k, v in scores_dict.items()])
-                except:
-                    pass
-            scores_escaped = scores.replace('"', '""') if scores != '-' else '-'
-            row_data.append(f'"{scores_escaped}"')
-        
-        if 'labeler_name' in select_columns:
-            labeler_name = label.get('labeler_name') or '-'
-            row_data.append(labeler_name)
-        
-        if 'notes' in select_columns:
-            notes = label.get('notes') or '-'
-            notes_escaped = notes.replace('"', '""') if notes != '-' else '-'
-            row_data.append(f'"{notes_escaped}"')
-        
-        if 'file_path' in select_columns:
-            file_path = label.get('file_path') or '-'
-            row_data.append(file_path)
-        
-        if 'created_at' in select_columns:
-            created_at = label.get('created_at') or '-'
-            row_data.append(str(created_at))
-        
-        if 'updated_at' in select_columns:
-            updated_at = label.get('updated_at') or '-'
-            row_data.append(str(updated_at))
-        
-        csv_lines.append(','.join(row_data))
-    
-    return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv; charset=utf-8', 
-                                        'Content-Disposition': 'attachment; filename="labels_export.csv"'}
+
+        if not labels:
+            return 'File_Path,File_Name,Quality,Reconstruction,Reconstruction_Scores,Labeler_Name,Notes,Created_At,Updated_At\nNo labels found', 200, {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="labels_export.csv"'}
+
+        # CSV header matching Google Sheets exactly
+        csv_lines = ['File_Path,File_Name,Quality,Reconstruction,Reconstruction_Scores,Labeler_Name,Notes,Created_At,Updated_At']
+
+        for label in labels:
+            file_path = label.get('file_path', '') or ''
+            file_name = label.get('file_name', '') or ''
+            quality = label.get('quality', '') or ''
+            reconstruction = label.get('reconstruction', '') or ''
+            reconstruction_scores = label.get('reconstruction_scores', '') or ''
+            labeler_name = label.get('labeler_name', '') or ''
+            notes = label.get('notes', '') or ''
+            created_at = str(label.get('created_at', '') or '')
+            updated_at = str(label.get('updated_at', '') or '')
+
+            # Escape quotes for CSV
+            notes_escaped = notes.replace('"', '""')
+            reconstruction_escaped = reconstruction.replace('"', '""')
+            reconstruction_scores_escaped = reconstruction_scores.replace('"', '""')
+
+            csv_lines.append(f'"{file_path}","{file_name}","{quality}","{reconstruction_escaped}",'
+                           f'"{reconstruction_scores_escaped}","{labeler_name}","{notes_escaped}",'
+                           f'"{created_at}","{updated_at}"')
+
+        return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv; charset=utf-8',
+                                            'Content-Disposition': 'attachment; filename="labels_export.csv"'}
+    except Exception as e:
+        conn.close()
+        import traceback
+        return f'Error exporting labels: {str(e)}\n{traceback.format_exc()}', 500
 
 @app.route('/api/pairwise', methods=['POST'])
 def save_pairwise_comparison():
@@ -989,39 +918,17 @@ def delete_pairwise_comparison(comp_id):
 
 @app.route('/api/pairwise/export', methods=['GET'])
 def export_pairwise_comparisons():
-    """Export all pairwise comparisons as CSV"""
+    """Export all pairwise comparisons as CSV - matching Google Sheets format"""
     conn = get_db_connection()
-    
+
     try:
-        # Check if table exists
-        if USE_POSTGRES:
-            c = conn.cursor(cursor_factory=RealDictCursor)
-            c.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_name = 'pairwise_comparisons'
-                );
-            """)
-            table_exists = c.fetchone()[0]
-        else:
-            c = conn.cursor()
-            c.execute("""
-                SELECT name FROM sqlite_master 
-                WHERE type='table' AND name='pairwise_comparisons'
-            """)
-            table_exists = c.fetchone() is not None
-        
-        if not table_exists:
-            conn.close()
-            return 'No pairwise comparisons table found', 404
-        
         # Get all comparisons
         if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
             c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
             comparisons = [dict(row) for row in c.fetchall()]
         else:
-            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-            # Convert to list of dicts
+            c = conn.cursor()
             c.execute('PRAGMA table_info(pairwise_comparisons)')
             columns = [row[1] for row in c.fetchall()]
             c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
@@ -1031,33 +938,34 @@ def export_pairwise_comparisons():
                 for i, col in enumerate(columns):
                     comp_dict[col] = row[i]
                 comparisons.append(comp_dict)
-        
+
         conn.close()
-        
+
         if not comparisons:
             return 'Image1_Path,Image1_Name,Image2_Path,Image2_Name,Reconstruction_Type,Winner,Labeler_Name,Notes,Created_At\nNo pairwise comparisons found', 200, {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pairwise_comparisons_export.csv"'}
-        
-        # Generate CSV
+
+        # CSV header matching Google Sheets exactly
         csv_lines = ['Image1_Path,Image1_Name,Image2_Path,Image2_Name,Reconstruction_Type,Winner,Labeler_Name,Notes,Created_At']
+
         for comp in comparisons:
-            image1_path = comp.get('image1_path', '-')
-            image1_name = comp.get('image1_name', '-')
-            image2_path = comp.get('image2_path', '-')
-            image2_name = comp.get('image2_name', '-')
-            reconstruction_type = comp.get('reconstruction_type', '-')
-            winner = comp.get('winner', '-')
-            labeler_name = comp.get('labeler_name', '-')
-            notes = comp.get('notes', '-')
-            created_at = comp.get('created_at', '-')
-            
-            # Escape quotes in notes for CSV
-            notes_escaped = notes.replace('"', '""') if notes != '-' else '-'
-            
-            csv_lines.append(f'{image1_path},{image1_name},{image2_path},{image2_name},'
-                           f'{reconstruction_type},{winner},{labeler_name},'
-                           f'"{notes_escaped}",{created_at}')
-        
-        return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv; charset=utf-8', 
+            image1_path = comp.get('image1_path', '') or ''
+            image1_name = comp.get('image1_name', '') or ''
+            image2_path = comp.get('image2_path', '') or ''
+            image2_name = comp.get('image2_name', '') or ''
+            reconstruction_type = comp.get('reconstruction_type', '') or ''
+            winner = comp.get('winner', '') or ''
+            labeler_name = comp.get('labeler_name', '') or ''
+            notes = comp.get('notes', '') or ''
+            created_at = str(comp.get('created_at', '') or '')
+
+            # Escape quotes for CSV
+            notes_escaped = notes.replace('"', '""')
+
+            csv_lines.append(f'"{image1_path}","{image1_name}","{image2_path}","{image2_name}",'
+                           f'"{reconstruction_type}","{winner}","{labeler_name}",'
+                           f'"{notes_escaped}","{created_at}"')
+
+        return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv; charset=utf-8',
                                             'Content-Disposition': 'attachment; filename="pairwise_comparisons_export.csv"'}
     except Exception as e:
         conn.close()
