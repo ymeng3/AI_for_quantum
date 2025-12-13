@@ -493,79 +493,138 @@ def sync_from_database_to_sheets():
         import traceback
         print(f"Error syncing from database: {e}\n{traceback.format_exc()}")
 
-def sync_from_sheets_to_databases():
-    """Sync data from Google Sheets to both SQLite and PostgreSQL databases"""
+def restore_from_sheets_if_empty(get_db_connection_func, use_postgres):
+    """Restore data from Google Sheets if database is empty (called on app startup)"""
     client = get_google_sheets_client()
     if not client or not GOOGLE_SHEETS_SPREADSHEET_ID:
-        print("Google Sheets not configured")
+        print("Google Sheets not configured, skipping restore check")
         return
-    
-    from app import get_db_connection, USE_POSTGRES
-    
+
     try:
+        conn = get_db_connection_func()
+        cursor = conn.cursor()
+
+        # Check if database has any data
+        if use_postgres:
+            cursor.execute('SELECT COUNT(*) FROM labels')
+            labels_count = cursor.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM pairwise_comparisons')
+            pairwise_count = cursor.fetchone()[0]
+        else:
+            cursor.execute('SELECT COUNT(*) FROM labels')
+            labels_count = cursor.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM pairwise_comparisons')
+            pairwise_count = cursor.fetchone()[0]
+
+        conn.close()
+
+        if labels_count > 0 or pairwise_count > 0:
+            print(f"Database has data (labels: {labels_count}, pairwise: {pairwise_count}), skipping restore")
+            return
+
+        print("Database is empty! Restoring from Google Sheets...")
+
         spreadsheet = client.open_by_key(GOOGLE_SHEETS_SPREADSHEET_ID)
-        
-        # Sync pairwise comparisons
+
+        # Restore pairwise comparisons
         try:
             worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_PAIRWISE_TAB)
             rows = worksheet.get_all_records()
-            
-            conn = get_db_connection()
-            if USE_POSTGRES:
-                from psycopg2.extras import RealDictCursor
-                cursor = conn.cursor(cursor_factory=RealDictCursor)
-            else:
+
+            if rows:
+                conn = get_db_connection_func()
                 cursor = conn.cursor()
-            
-            for row in rows:
-                # Check if exists
-                if USE_POSTGRES:
-                    cursor.execute("""
-                        SELECT id FROM pairwise_comparisons 
-                        WHERE image1_path = %s AND image2_path = %s AND reconstruction_type = %s
-                    """, (row['Image1_Path'], row['Image2_Path'], row['Reconstruction_Type']))
-                else:
-                    cursor.execute("""
-                        SELECT id FROM pairwise_comparisons 
-                        WHERE image1_path = ? AND image2_path = ? AND reconstruction_type = ?
-                    """, (row['Image1_Path'], row['Image2_Path'], row['Reconstruction_Type']))
-                
-                exists = cursor.fetchone()
-                
-                if not exists:
-                    # Insert new record
-                    if USE_POSTGRES:
-                        cursor.execute("""
-                            INSERT INTO pairwise_comparisons 
-                            (image1_path, image1_name, image2_path, image2_name, 
-                             reconstruction_type, winner, labeler_name, notes, created_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (row['Image1_Path'], row['Image1_Name'], row['Image2_Path'], 
-                              row['Image2_Name'], row['Reconstruction_Type'], row['Winner'],
-                              row.get('Labeler_Name', ''), row.get('Notes', ''), 
-                              row.get('Created_At', datetime.now().isoformat())))
-                    else:
-                        cursor.execute("""
-                            INSERT INTO pairwise_comparisons 
-                            (image1_path, image1_name, image2_path, image2_name, 
-                             reconstruction_type, winner, labeler_name, notes, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (row['Image1_Path'], row['Image1_Name'], row['Image2_Path'], 
-                              row['Image2_Name'], row['Reconstruction_Type'], row['Winner'],
-                              row.get('Labeler_Name', ''), row.get('Notes', ''), 
-                              row.get('Created_At', datetime.now().isoformat())))
-            
-            conn.commit()
-            conn.close()
-            print(f"Synced {len(rows)} pairwise comparisons from Google Sheets")
+
+                restored = 0
+                for row in rows:
+                    try:
+                        if use_postgres:
+                            cursor.execute("""
+                                INSERT INTO pairwise_comparisons
+                                (image1_path, image1_name, image2_path, image2_name,
+                                 reconstruction_type, winner, labeler_name, notes, created_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (row.get('Image1_Path', ''), row.get('Image1_Name', ''),
+                                  row.get('Image2_Path', ''), row.get('Image2_Name', ''),
+                                  row.get('Reconstruction_Type', ''), row.get('Winner', ''),
+                                  row.get('Labeler_Name', ''), row.get('Notes', ''),
+                                  row.get('Created_At', '') or datetime.now().isoformat()))
+                        else:
+                            cursor.execute("""
+                                INSERT INTO pairwise_comparisons
+                                (image1_path, image1_name, image2_path, image2_name,
+                                 reconstruction_type, winner, labeler_name, notes, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (row.get('Image1_Path', ''), row.get('Image1_Name', ''),
+                                  row.get('Image2_Path', ''), row.get('Image2_Name', ''),
+                                  row.get('Reconstruction_Type', ''), row.get('Winner', ''),
+                                  row.get('Labeler_Name', ''), row.get('Notes', ''),
+                                  row.get('Created_At', '') or datetime.now().isoformat()))
+                        restored += 1
+                    except Exception as e:
+                        print(f"Error restoring pairwise row: {e}")
+
+                conn.commit()
+                conn.close()
+                print(f"✅ Restored {restored} pairwise comparisons from Google Sheets")
         except Exception as e:
-            print(f"Error syncing pairwise data: {e}")
-        
-        # Sync absolute scoring (similar logic)
-        # ... (implement similar to pairwise)
-        
+            print(f"Error restoring pairwise data: {e}")
+
+        # Restore absolute labels
+        try:
+            worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_ABSOLUTE_TAB)
+            rows = worksheet.get_all_records()
+
+            if rows:
+                conn = get_db_connection_func()
+                cursor = conn.cursor()
+
+                restored = 0
+                for row in rows:
+                    try:
+                        file_path = row.get('File_Path', '')
+                        if not file_path:
+                            continue
+
+                        if use_postgres:
+                            cursor.execute("""
+                                INSERT INTO labels
+                                (file_path, file_name, quality, reconstruction,
+                                 reconstruction_scores, labeler_name, notes, created_at, updated_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (file_path) DO NOTHING
+                            """, (file_path, row.get('File_Name', ''),
+                                  row.get('Quality', ''), row.get('Reconstruction', ''),
+                                  row.get('Reconstruction_Scores', ''), row.get('Labeler_Name', ''),
+                                  row.get('Notes', ''),
+                                  row.get('Created_At', '') or datetime.now().isoformat(),
+                                  row.get('Updated_At', '') or datetime.now().isoformat()))
+                        else:
+                            cursor.execute("""
+                                INSERT OR IGNORE INTO labels
+                                (file_path, file_name, quality, reconstruction,
+                                 reconstruction_scores, labeler_name, notes, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (file_path, row.get('File_Name', ''),
+                                  row.get('Quality', ''), row.get('Reconstruction', ''),
+                                  row.get('Reconstruction_Scores', ''), row.get('Labeler_Name', ''),
+                                  row.get('Notes', ''),
+                                  row.get('Created_At', '') or datetime.now().isoformat(),
+                                  row.get('Updated_At', '') or datetime.now().isoformat()))
+                        restored += 1
+                    except Exception as e:
+                        print(f"Error restoring label row: {e}")
+
+                conn.commit()
+                conn.close()
+                print(f"✅ Restored {restored} absolute labels from Google Sheets")
+        except Exception as e:
+            print(f"Error restoring absolute labels: {e}")
+
     except Exception as e:
-        print(f"Error syncing from Google Sheets: {e}")
+        import traceback
+        print(f"Error in restore_from_sheets_if_empty: {e}")
+        print(traceback.format_exc())
 
 if __name__ == '__main__':
     print("Google Sheets sync utility")

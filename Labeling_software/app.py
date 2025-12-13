@@ -1067,6 +1067,13 @@ def export_pairwise_comparisons():
 # Initialize database on startup (for both local and cloud)
 init_db()
 
+# Auto-restore from Google Sheets if database is empty
+try:
+    from google_sheets_sync import restore_from_sheets_if_empty
+    restore_from_sheets_if_empty(get_db_connection, USE_POSTGRES)
+except Exception as e:
+    print(f"Note: Could not check/restore from Google Sheets: {e}")
+
 if __name__ == '__main__':
     # Get port from environment (for cloud) or use default
     port = int(os.environ.get('PORT', 5001))
