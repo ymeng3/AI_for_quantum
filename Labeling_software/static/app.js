@@ -1412,81 +1412,69 @@ function loadRandomPair() {
 }
 
 // Save pairwise comparison
-async function savePairwiseComparison(loadNext = false) {
+function savePairwiseComparison() {
     if (!pairwiseImage1 || !pairwiseImage2) {
         alert('Please select two images to compare first');
         return;
     }
-    
+
     if (!pairwiseLabelerName) {
         alert('Please enter your name before saving');
         return;
     }
-    
+
     // Check if at least one comparison was made (including "not_apply")
     const comparisons = Object.keys(pairwiseComparisons);
     if (comparisons.length === 0) {
         alert('Please make at least one comparison or mark as "Not Apply" before saving');
         return;
     }
-    
-    try {
-        // Save each comparison separately
-        const savePromises = comparisons.map(recon => {
-            return fetch('/api/pairwise', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    image1_path: pairwiseImage1.path,
-                    image1_name: pairwiseImage1.name,
-                    image2_path: pairwiseImage2.path,
-                    image2_name: pairwiseImage2.name,
-                    reconstruction_type: recon,
-                    winner: pairwiseComparisons[recon],
-                    labeler_name: pairwiseLabelerName,
-                    notes: pairwiseNotes || null
-                })
-            });
-        });
-        
-        const results = await Promise.all(savePromises);
-        
-        // Check each result and get error messages
-        const errors = [];
-        for (let i = 0; i < results.length; i++) {
-            const response = results[i];
-            if (!response.ok) {
-                try {
-                    const errorData = await response.json();
-                    errors.push(`Reconstruction "${comparisons[i]}": ${errorData.error || 'Unknown error'}`);
-                } catch (e) {
-                    errors.push(`Reconstruction "${comparisons[i]}": HTTP ${response.status}`);
-                }
-            }
-        }
-        
-        if (errors.length === 0) {
-            // Show notification immediately (don't wait for reload)
-            showNotification('Comparison saved!', 2000);
 
-            // Clear the current comparison
-            clearPairwiseComparison();
+    // Capture current state before clearing
+    const saveData = comparisons.map(recon => ({
+        image1_path: pairwiseImage1.path,
+        image1_name: pairwiseImage1.name,
+        image2_path: pairwiseImage2.path,
+        image2_name: pairwiseImage2.name,
+        reconstruction_type: recon,
+        winner: pairwiseComparisons[recon],
+        labeler_name: pairwiseLabelerName,
+        notes: pairwiseNotes || null
+    }));
 
-            // Load a new random pair
-            loadRandomPair();
-
-            // Reload pairwise comparisons in background to update table
-            loadPairwiseComparisons();
-        } else {
-            console.error('Errors saving comparisons:', errors);
-            alert('Error saving some comparisons:\n' + errors.join('\n'));
-        }
-    } catch (error) {
-        console.error('Error saving pairwise comparison:', error);
-        alert('Error saving comparison');
+    // Show notification IMMEDIATELY (optimistic UI)
+    const notification = document.getElementById('pairwiseSaveNotification');
+    if (notification) {
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 2000);
     }
+
+    // Clear and load next pair IMMEDIATELY (don't wait for API)
+    clearPairwiseComparison();
+    loadRandomPair();
+
+    // Save in background (fire and forget with error handling)
+    Promise.all(saveData.map(data =>
+        fetch('/api/pairwise', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+    )).then(results => {
+        // Check for errors
+        const failed = results.filter(r => !r.ok);
+        if (failed.length > 0) {
+            console.error('Some saves failed:', failed.length);
+            showNotification(`Warning: ${failed.length} comparison(s) may not have saved`, 3000);
+        }
+        // Reload table in background
+        loadPairwiseComparisons();
+    }).catch(error => {
+        console.error('Error saving comparisons:', error);
+        showNotification('Error saving - please try again', 3000);
+    });
 }
 
 // Clear pairwise comparison (but keep images)
