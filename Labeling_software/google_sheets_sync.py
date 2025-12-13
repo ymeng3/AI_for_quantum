@@ -337,13 +337,13 @@ def sync_from_database_to_sheets():
             if USE_POSTGRES:
                 from psycopg2.extras import RealDictCursor
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
-                cursor.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at')
+                cursor.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
                 comparisons = [dict(row) for row in cursor.fetchall()]
             else:
                 cursor = conn.cursor()
                 cursor.execute('PRAGMA table_info(pairwise_comparisons)')
                 columns = [row[1] for row in cursor.fetchall()]
-                cursor.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at')
+                cursor.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
                 comparisons = []
                 for row in cursor.fetchall():
                     comp_dict = {}
@@ -421,13 +421,13 @@ def sync_from_database_to_sheets():
             if USE_POSTGRES:
                 from psycopg2.extras import RealDictCursor
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
-                cursor.execute('SELECT * FROM labels ORDER BY created_at')
+                cursor.execute('SELECT * FROM labels ORDER BY created_at DESC')
                 labels = [dict(row) for row in cursor.fetchall()]
             else:
                 cursor = conn.cursor()
                 cursor.execute('PRAGMA table_info(labels)')
                 columns = [row[1] for row in cursor.fetchall()]
-                cursor.execute('SELECT * FROM labels ORDER BY created_at')
+                cursor.execute('SELECT * FROM labels ORDER BY created_at DESC')
                 labels = []
                 for row in cursor.fetchall():
                     label_dict = {}
