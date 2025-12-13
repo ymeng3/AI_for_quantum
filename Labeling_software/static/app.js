@@ -1037,19 +1037,20 @@ function initializePairwiseMode() {
         btn.addEventListener('click', (e) => {
             const recon = e.target.dataset.recon;
             const winner = e.target.dataset.winner;
-            
+
             // Update button states for this reconstruction type
             document.querySelectorAll(`.pairwise-btn[data-recon="${recon}"]`).forEach(b => {
                 b.classList.remove('active');
                 b.style.backgroundColor = 'white';
                 b.style.borderColor = '#ddd';
+                b.style.color = '#333';  // Reset text color to dark
             });
-            
+
             e.target.classList.add('active');
             e.target.style.backgroundColor = '#4a90e2';
             e.target.style.borderColor = '#4a90e2';
             e.target.style.color = 'white';
-            
+
             pairwiseComparisons[recon] = winner;
         });
     });
@@ -1467,16 +1468,17 @@ async function savePairwiseComparison(loadNext = false) {
         }
         
         if (errors.length === 0) {
-            // Reload pairwise comparisons to update table
-            await loadPairwiseComparisons();
-            
+            // Show notification immediately (don't wait for reload)
+            showNotification('Comparison saved!', 2000);
+
             // Clear the current comparison
             clearPairwiseComparison();
-            
+
             // Load a new random pair
             loadRandomPair();
-            
-            alert('Comparison saved successfully!');
+
+            // Reload pairwise comparisons in background to update table
+            loadPairwiseComparisons();
         } else {
             console.error('Errors saving comparisons:', errors);
             alert('Error saving some comparisons:\n' + errors.join('\n'));
