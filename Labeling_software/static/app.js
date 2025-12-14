@@ -34,7 +34,81 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial button visibility based on default mode
     document.getElementById('randomBtn').style.display = currentMode === 'absolute' ? 'block' : 'none';
     document.getElementById('pairwiseRandomBtn').style.display = currentMode === 'pairwise' ? 'block' : 'none';
+    
+    // Create notification container
+    const notificationContainer = document.createElement('div');
+    notificationContainer.id = 'notificationContainer';
+    document.body.appendChild(notificationContainer);
 });
+
+// Show a notification message
+function showNotification(message, duration = 3000, targetElement = null) {
+    // If target element is provided, show notification next to it
+    if (targetElement) {
+        // Find the parent label container
+        const labelContainer = targetElement.closest('label');
+        if (labelContainer) {
+            // Find the span with the text "Mark this image as 'Bad'"
+            const textSpan = labelContainer.querySelector('span');
+            
+            // Remove any existing notification first
+            const existingNotification = labelContainer.querySelector('.inline-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // Create notification element
+            const notification = document.createElement('span');
+            notification.className = 'inline-notification';
+            notification.textContent = message;
+            
+            // Insert after the text span
+            if (textSpan && textSpan.nextSibling) {
+                labelContainer.insertBefore(notification, textSpan.nextSibling);
+            } else {
+                labelContainer.appendChild(notification);
+            }
+            
+            // Trigger animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Remove after duration
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, duration);
+            return;
+        }
+    }
+    
+    // Fallback to global notification container
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
+    
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    container.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Remove after duration
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, duration);
+}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -207,10 +281,19 @@ let pairwiseComparisonsList = [];
 async function loadPairwiseComparisons() {
     try {
         const response = await fetch('/api/pairwise');
+        if (!response.ok) {
+            console.error('Failed to load pairwise comparisons:', response.status, response.statusText);
+            pairwiseComparisonsList = [];
+            renderPairwiseTable();
+            return;
+        }
         pairwiseComparisonsList = await response.json();
+        console.log(`Loaded ${pairwiseComparisonsList.length} pairwise comparisons`);
         renderPairwiseTable();
     } catch (error) {
         console.error('Error loading pairwise comparisons:', error);
+        pairwiseComparisonsList = [];
+        renderPairwiseTable();
     }
 }
 
@@ -225,13 +308,18 @@ function renderImageGrid(filter = 'all') {
     }
     
     let filteredImages = images;
+    
+    // In pairwise mode, we still show Bad images (so user can see the badge)
+    // but they will be prevented from selection in selectImageForPairwise
+    // This allows users to see which images are marked as Bad
+    
     if (filter === 'labeled') {
-        filteredImages = images.filter(img => {
+        filteredImages = filteredImages.filter(img => {
             const label = labels[img.path];
             return label && (label.quality || label.reconstruction);
         });
     } else if (filter === 'unlabeled') {
-        filteredImages = images.filter(img => {
+        filteredImages = filteredImages.filter(img => {
             const label = labels[img.path];
             return !label || (!label.quality && !label.reconstruction);
         });
@@ -308,12 +396,20 @@ function renderImageGrid(filter = 'all') {
         if (label && label.reconstruction) {
             try {
                 const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
-                if (Array.isArray(recon) && recon.length > 0) {
-                    badge.textContent = '✓';
-                    badge.classList.add('labeled');
+                if (Array.isArray(recon)) {
+                    if (recon.includes('Bad')) {
+                        badge.textContent = 'Bad';
+                        badge.className = 'status-badge bad';
+                    } else if (recon.length > 0) {
+                        badge.textContent = '✓';
+                        badge.className = 'status-badge labeled';
+                    }
+                } else if (recon === 'Bad') {
+                    badge.textContent = 'Bad';
+                    badge.className = 'status-badge bad';
                 } else if (recon) {
-            badge.textContent = '✓';
-            badge.classList.add('labeled');
+                    badge.textContent = '✓';
+                    badge.className = 'status-badge labeled';
                 }
             } catch {
                 // Ignore parse errors
@@ -403,6 +499,9 @@ function renderImageGrid(filter = 'all') {
                 }
             });
         }
+        
+        // Update all badges after grid is rendered
+        updateImageGridStatus();
     }, 50); // Small delay to ensure DOM is ready
 }
 
@@ -422,20 +521,40 @@ function updateImageGridStatus() {
         if (label && label.reconstruction) {
             try {
                 const recon = typeof label.reconstruction === 'string' ? JSON.parse(label.reconstruction) : label.reconstruction;
-                if (Array.isArray(recon) && recon.length > 0) {
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'status-badge';
-                item.appendChild(badge);
-            }
-            badge.textContent = '✓';
-            badge.className = 'status-badge labeled';
+                if (Array.isArray(recon)) {
+                    if (recon.includes('Bad')) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'status-badge';
+                            item.appendChild(badge);
+                        }
+                        badge.textContent = 'Bad';
+                        badge.className = 'status-badge bad';
+                    } else if (recon.length > 0) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'status-badge';
+                            item.appendChild(badge);
+                        }
+                        badge.textContent = '✓';
+                        badge.className = 'status-badge labeled';
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                } else if (recon === 'Bad') {
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge';
+                        item.appendChild(badge);
+                    }
+                    badge.textContent = 'Bad';
+                    badge.className = 'status-badge bad';
                 } else if (recon) {
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'status-badge';
-                item.appendChild(badge);
-            }
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge';
+                        item.appendChild(badge);
+                    }
                     badge.textContent = '✓';
                     badge.className = 'status-badge labeled';
                 } else if (badge) {
@@ -771,6 +890,9 @@ async function deleteLabel(filePath) {
 async function exportLabels() {
     try {
         const response = await fetch('/api/labels/export');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const csv = await response.text();
         
         // Create download link
@@ -785,7 +907,32 @@ async function exportLabels() {
         window.URL.revokeObjectURL(url);
     } catch (error) {
         console.error('Error exporting labels:', error);
-        alert('Error exporting labels');
+        alert('Error exporting labels: ' + error.message);
+    }
+}
+
+// Export pairwise comparisons as CSV
+async function exportPairwiseComparisons() {
+    try {
+        const response = await fetch('/api/pairwise/export');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csv = await response.text();
+        
+        // Create download link
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pairwise_comparisons_export.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error exporting pairwise comparisons:', error);
+        alert('Error exporting pairwise comparisons: ' + error.message);
     }
 }
 
@@ -820,6 +967,9 @@ function switchMode(mode) {
     document.getElementById('absoluteMode').style.display = mode === 'absolute' ? 'flex' : 'none';
     document.getElementById('pairwiseMode').style.display = mode === 'pairwise' ? 'block' : 'none';
     
+    // Re-render image grid to apply Bad filter in pairwise mode
+    renderImageGrid(document.getElementById('filterSelect').value);
+    
     // Don't auto-load random pair - let user select manually
     // User can click "Random Pair" button if they want random selection
 }
@@ -836,24 +986,71 @@ function initializePairwiseMode() {
         pairwiseNotes = e.target.value;
     });
     
+    // Mark as Bad checkboxes - use direct onclick to ensure it works
+    const markBad1 = document.getElementById('markBadImage1');
+    const markBad2 = document.getElementById('markBadImage2');
+    
+    // Remove old listeners if they exist
+    if (markBad1 && markBad1._badHandler) {
+        markBad1.removeEventListener('change', markBad1._badHandler);
+        markBad1.onclick = null;
+    }
+    if (markBad2 && markBad2._badHandler) {
+        markBad2.removeEventListener('change', markBad2._badHandler);
+        markBad2.onclick = null;
+    }
+    
+    if (markBad1) {
+        const handler1 = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (markBad1.checked && pairwiseImage1) {
+                await markImageAsBad(pairwiseImage1, 1);
+            } else if (markBad1.checked && !pairwiseImage1) {
+                alert('Please select an image first');
+                markBad1.checked = false;
+            }
+        };
+        markBad1._badHandler = handler1;
+        markBad1.addEventListener('change', handler1);
+        markBad1.onclick = handler1; // Also use onclick as backup
+    }
+    
+    if (markBad2) {
+        const handler2 = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (markBad2.checked && pairwiseImage2) {
+                await markImageAsBad(pairwiseImage2, 2);
+            } else if (markBad2.checked && !pairwiseImage2) {
+                alert('Please select an image first');
+                markBad2.checked = false;
+            }
+        };
+        markBad2._badHandler = handler2;
+        markBad2.addEventListener('change', handler2);
+        markBad2.onclick = handler2; // Also use onclick as backup
+    }
+    
     // Pairwise comparison buttons
     document.querySelectorAll('.pairwise-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const recon = e.target.dataset.recon;
             const winner = e.target.dataset.winner;
-            
+
             // Update button states for this reconstruction type
             document.querySelectorAll(`.pairwise-btn[data-recon="${recon}"]`).forEach(b => {
                 b.classList.remove('active');
                 b.style.backgroundColor = 'white';
                 b.style.borderColor = '#ddd';
+                b.style.color = '#333';  // Reset text color to dark
             });
-            
+
             e.target.classList.add('active');
             e.target.style.backgroundColor = '#4a90e2';
             e.target.style.borderColor = '#4a90e2';
             e.target.style.color = 'white';
-            
+
             pairwiseComparisons[recon] = winner;
         });
     });
@@ -882,6 +1079,12 @@ function initializePairwiseMode() {
 
 // Select image for pairwise comparison (manual selection)
 function selectImageForPairwise(img, itemElement) {
+    // Don't allow selecting images labeled as "Bad"
+    if (isImageBad(img.path)) {
+        alert('This image is labeled as "Bad" and cannot be used in pairwise comparisons');
+        return;
+    }
+    
     console.log('selectImageForPairwise called', img.path, 'Image1:', pairwiseImage1?.path, 'Image2:', pairwiseImage2?.path);
     
     // Check if clicking on an already selected image (toggle/deselect)
@@ -897,20 +1100,20 @@ function selectImageForPairwise(img, itemElement) {
     }
     
     // Determine which image slot to fill
-    // If both are empty, fill Image 1
-    // If Image 1 is empty but Image 2 is filled, fill Image 1
-    // If Image 2 is empty but Image 1 is filled, fill Image 2
-    // If both are filled, replace Image 1
-    if (!pairwiseImage1) {
-        console.log('Setting Image 1');
+    // Priority: Fill empty slots first (Image 1, then Image 2)
+    // If both are filled, replace Image 2
+    if (!pairwiseImage1 && !pairwiseImage2) {
+        // Both empty - fill Image 1 first
+        setPairwiseImage(1, img, itemElement);
+    } else if (!pairwiseImage1) {
+        // Image 1 empty, Image 2 filled - fill Image 1
         setPairwiseImage(1, img, itemElement);
     } else if (!pairwiseImage2) {
-        console.log('Setting Image 2');
+        // Image 1 filled, Image 2 empty - fill Image 2
         setPairwiseImage(2, img, itemElement);
     } else {
-        // Both filled - replace Image 1
-        console.log('Replacing Image 1');
-        setPairwiseImage(1, img, itemElement);
+        // Both filled - replace Image 2
+        setPairwiseImage(2, img, itemElement);
     }
 }
 
@@ -919,13 +1122,25 @@ function clearPairwiseImage(slot) {
     if (slot === 1) {
         pairwiseImage1 = null;
         const imgEl = document.getElementById('pairwiseImage1');
-        imgEl.src = '';
-        document.getElementById('pairwiseImage1Info').textContent = 'No image selected';
+        if (imgEl) imgEl.src = '';
+        const infoEl = document.getElementById('pairwiseImage1Info');
+        if (infoEl) infoEl.textContent = 'No image selected';
+        const badCheckbox = document.getElementById('markBadImage1');
+        if (badCheckbox) {
+            badCheckbox.checked = false;
+            badCheckbox.disabled = true; // Disable when no image
+        }
     } else {
         pairwiseImage2 = null;
         const imgEl = document.getElementById('pairwiseImage2');
-        imgEl.src = '';
-        document.getElementById('pairwiseImage2Info').textContent = 'No image selected';
+        if (imgEl) imgEl.src = '';
+        const infoEl = document.getElementById('pairwiseImage2Info');
+        if (infoEl) infoEl.textContent = 'No image selected';
+        const badCheckbox = document.getElementById('markBadImage2');
+        if (badCheckbox) {
+            badCheckbox.checked = false;
+            badCheckbox.disabled = true; // Disable when no image
+        }
     }
     
     // Update visual indicators in grid
@@ -938,6 +1153,13 @@ function clearPairwiseImage(slot) {
 // Set a pairwise image in a specific slot
 function setPairwiseImage(slot, img, itemElement) {
     console.log('setPairwiseImage called', slot, img.path);
+    
+    // Uncheck and enable/disable the "Mark as Bad" checkbox when setting a new image
+    const badCheckbox = document.getElementById(`markBadImage${slot}`);
+    if (badCheckbox) {
+        badCheckbox.checked = false;
+        badCheckbox.disabled = false; // Enable when image is set
+    }
     
     if (slot === 1) {
         pairwiseImage1 = img;
@@ -962,6 +1184,9 @@ function setPairwiseImage(slot, img, itemElement) {
         if (infoEl) {
             infoEl.textContent = img.name;
         }
+        // Enable the Bad checkbox
+        const badCheckbox1 = document.getElementById('markBadImage1');
+        if (badCheckbox1) badCheckbox1.disabled = false;
     } else if (slot === 2) {
         pairwiseImage2 = img;
         const encodedPath = img.path.split('/').map(segment => encodeURIComponent(segment)).join('/');
@@ -985,6 +1210,9 @@ function setPairwiseImage(slot, img, itemElement) {
         if (infoEl) {
             infoEl.textContent = img.name;
         }
+        // Enable the Bad checkbox
+        const badCheckbox2 = document.getElementById('markBadImage2');
+        if (badCheckbox2) badCheckbox2.disabled = false;
     }
     
     // Update visual indicators in grid
@@ -1008,25 +1236,165 @@ function updatePairwiseImageIndicators() {
     });
 }
 
-// Load a random pair of images for comparison
-function loadRandomPair() {
-    if (images.length < 2) {
-        alert('Need at least 2 images for pairwise comparison');
+// Helper function to check if image is labeled as "Bad"
+function isImageBad(imgPath) {
+    const label = labels[imgPath];
+    if (!label || !label.reconstruction) {
+        return false;
+    }
+    let reconstruction = label.reconstruction;
+    if (typeof reconstruction === 'string') {
+        try {
+            reconstruction = JSON.parse(reconstruction);
+        } catch (e) {
+            reconstruction = [reconstruction];
+        }
+    }
+    if (Array.isArray(reconstruction)) {
+        return reconstruction.includes('Bad');
+    }
+    return reconstruction === 'Bad';
+}
+
+// Mark an image as "Bad" and replace it with a random non-Bad image
+async function markImageAsBad(img, slot) {
+    if (!pairwiseLabelerName) {
+        alert('Please enter your name before marking an image as Bad');
+        const checkbox = document.getElementById(`markBadImage${slot}`);
+        if (checkbox) checkbox.checked = false;
         return;
     }
     
-    // Select two random different images
-    let idx1 = Math.floor(Math.random() * images.length);
-    let idx2 = Math.floor(Math.random() * images.length);
-    while (idx2 === idx1) {
-        idx2 = Math.floor(Math.random() * images.length);
+    if (!img) {
+        alert('No image selected');
+        const checkbox = document.getElementById(`markBadImage${slot}`);
+        if (checkbox) checkbox.checked = false;
+        return;
     }
     
-    const item1 = document.querySelector(`.image-item[data-path="${images[idx1].path}"]`);
-    const item2 = document.querySelector(`.image-item[data-path="${images[idx2].path}"]`);
+    // Disable checkbox during processing
+    const checkbox = document.getElementById(`markBadImage${slot}`);
+    if (checkbox) checkbox.disabled = true;
     
-    setPairwiseImage(1, images[idx1], item1);
-    setPairwiseImage(2, images[idx2], item2);
+    try {
+        // Save the image as "Bad" label
+        const response = await fetch('/api/labels', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_path: img.path,
+                file_name: img.name,
+                quality: null,
+                reconstruction: ['Bad'],
+                reconstruction_scores: null,
+                labeler_name: pairwiseLabelerName,
+                notes: 'Marked as Bad in pairwise mode'
+            })
+        });
+        
+        if (response.ok) {
+            // Update local labels cache immediately without full reload
+            const labelData = await response.json();
+            if (labelData && labelData.id) {
+                labels[img.path] = labelData;
+            }
+            
+            // Re-render the grid to show the Bad badge
+            // Since we now show Bad images in pairwise mode, the badge will appear
+            const currentFilter = document.getElementById('filterSelect')?.value || 'all';
+            renderImageGrid(currentFilter);
+            
+            // Also update the specific image item badge directly for immediate feedback
+            setTimeout(() => {
+                const imageItem = document.querySelector(`.image-item[data-path="${img.path}"]`);
+                if (imageItem) {
+                    let badge = imageItem.querySelector('.status-badge');
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'status-badge bad';
+                        badge.textContent = 'Bad';
+                        imageItem.appendChild(badge);
+                    } else {
+                        badge.textContent = 'Bad';
+                        badge.className = 'status-badge bad';
+                    }
+                }
+            }, 100);
+            
+            // Find a random non-Bad image to replace it
+            const validImages = images.filter(i => !isImageBad(i.path) && i.path !== img.path);
+            
+            if (validImages.length === 0) {
+                alert('No more non-Bad images available to replace this one');
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.disabled = false;
+                }
+                return;
+            }
+            
+            // Select a random image
+            const randomIdx = Math.floor(Math.random() * validImages.length);
+            const newImg = validImages[randomIdx];
+            
+            // Find the item element in the grid
+            const item = document.querySelector(`.image-item[data-path="${newImg.path}"]`);
+            
+            // Replace the image
+            setPairwiseImage(slot, newImg, item);
+            
+            // Uncheck and re-enable the checkbox
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.disabled = false;
+            }
+            
+            // Show notification next to the checkbox
+            showNotification(`Image marked as "Bad" and replaced with ${newImg.name}`, 3000, checkbox);
+        } else {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            alert('Error marking image as Bad: ' + (errorData.error || 'Unknown error'));
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.disabled = false;
+            }
+        }
+    } catch (error) {
+        alert('Error marking image as Bad: ' + error.message);
+        if (checkbox) {
+            checkbox.checked = false;
+            checkbox.disabled = false;
+        }
+    }
+}
+
+// Load a random pair of images for comparison
+function loadRandomPair() {
+    // Filter out "Bad" images for random selection
+    const validImages = images.filter(img => !isImageBad(img.path));
+    
+    if (validImages.length < 2) {
+        alert('Need at least 2 non-"Bad" images for pairwise comparison');
+        return;
+    }
+    
+    // Select two random different images from valid images
+    let idx1 = Math.floor(Math.random() * validImages.length);
+    let idx2 = Math.floor(Math.random() * validImages.length);
+    while (idx2 === idx1) {
+        idx2 = Math.floor(Math.random() * validImages.length);
+    }
+    
+    const img1 = validImages[idx1];
+    const img2 = validImages[idx2];
+    
+    const item1 = document.querySelector(`.image-item[data-path="${img1.path}"]`);
+    const item2 = document.querySelector(`.image-item[data-path="${img2.path}"]`);
+    
+    setPairwiseImage(1, img1, item1);
+    setPairwiseImage(2, img2, item2);
     
     // Force resize to ensure both images are same size
     setTimeout(() => {
@@ -1044,74 +1412,69 @@ function loadRandomPair() {
 }
 
 // Save pairwise comparison
-async function savePairwiseComparison(loadNext = false) {
+function savePairwiseComparison() {
     if (!pairwiseImage1 || !pairwiseImage2) {
-        alert('Please wait for images to load');
+        alert('Please select two images to compare first');
         return;
     }
-    
+
     if (!pairwiseLabelerName) {
         alert('Please enter your name before saving');
         return;
     }
-    
+
     // Check if at least one comparison was made (including "not_apply")
     const comparisons = Object.keys(pairwiseComparisons);
     if (comparisons.length === 0) {
         alert('Please make at least one comparison or mark as "Not Apply" before saving');
         return;
     }
-    
-    try {
-        // Save each comparison separately
-        const savePromises = comparisons.map(recon => {
-            return fetch('/api/pairwise', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    image1_path: pairwiseImage1.path,
-                    image1_name: pairwiseImage1.name,
-                    image2_path: pairwiseImage2.path,
-                    image2_name: pairwiseImage2.name,
-                    reconstruction_type: recon,
-                    winner: pairwiseComparisons[recon],
-                    labeler_name: pairwiseLabelerName,
-                    notes: pairwiseNotes || null
-                })
-            });
-        });
-        
-        const results = await Promise.all(savePromises);
-        
-        // Check each result and get error messages
-        const errors = [];
-        for (let i = 0; i < results.length; i++) {
-            const response = results[i];
-            if (!response.ok) {
-                try {
-                    const errorData = await response.json();
-                    errors.push(`Reconstruction "${comparisons[i]}": ${errorData.error || 'Unknown error'}`);
-                } catch (e) {
-                    errors.push(`Reconstruction "${comparisons[i]}": HTTP ${response.status}`);
-                }
-            }
-        }
-        
-        if (errors.length === 0) {
-            // Reload pairwise comparisons to update table
-            await loadPairwiseComparisons();
-            
-            alert('Comparison saved successfully!');
-        } else {
-            console.error('Errors saving comparisons:', errors);
-            alert('Error saving some comparisons:\n' + errors.join('\n'));
-        }
-    } catch (error) {
-        console.error('Error saving pairwise comparison:', error);
-        alert('Error saving comparison');
+
+    // Capture current state before clearing
+    const saveData = comparisons.map(recon => ({
+        image1_path: pairwiseImage1.path,
+        image1_name: pairwiseImage1.name,
+        image2_path: pairwiseImage2.path,
+        image2_name: pairwiseImage2.name,
+        reconstruction_type: recon,
+        winner: pairwiseComparisons[recon],
+        labeler_name: pairwiseLabelerName,
+        notes: pairwiseNotes || null
+    }));
+
+    // Show notification IMMEDIATELY (optimistic UI)
+    const notification = document.getElementById('pairwiseSaveNotification');
+    if (notification) {
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 2000);
     }
+
+    // Clear and load next pair IMMEDIATELY (don't wait for API)
+    clearPairwiseComparison();
+    loadRandomPair();
+
+    // Save in background (fire and forget with error handling)
+    Promise.all(saveData.map(data =>
+        fetch('/api/pairwise', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+    )).then(results => {
+        // Check for errors
+        const failed = results.filter(r => !r.ok);
+        if (failed.length > 0) {
+            console.error('Some saves failed:', failed.length);
+            showNotification(`Warning: ${failed.length} comparison(s) may not have saved`, 3000);
+        }
+        // Reload table in background
+        loadPairwiseComparisons();
+    }).catch(error => {
+        console.error('Error saving comparisons:', error);
+        showNotification('Error saving - please try again', 3000);
+    });
 }
 
 // Clear pairwise comparison (but keep images)
@@ -1148,6 +1511,9 @@ function setupLabelsTabs() {
     document.getElementById('pairwiseLabelsTab').addEventListener('click', () => {
         switchLabelsTab('pairwise');
     });
+    
+    // Set initial tab state (pairwise is default)
+    switchLabelsTab('pairwise');
 }
 
 // Switch between absolute and pairwise labels tabs
@@ -1164,7 +1530,13 @@ function switchLabelsTab(tab) {
 // Render pairwise comparisons table
 function renderPairwiseTable() {
     const tbody = document.getElementById('pairwiseTableBody');
+    if (!tbody) {
+        console.error('pairwiseTableBody element not found!');
+        return;
+    }
     tbody.innerHTML = '';
+    
+    console.log(`Rendering ${pairwiseComparisonsList.length} pairwise comparisons`);
     
     if (pairwiseComparisonsList.length === 0) {
         const row = document.createElement('tr');

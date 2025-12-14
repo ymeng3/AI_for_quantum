@@ -529,6 +529,39 @@ def save_label():
                     ''', (file_path, file_name, quality, reconstruction_json, scores_json, labeler_name, notes))
             
             conn.commit()
+            
+            # Sync to Google Sheets if configured (before closing connection)
+            try:
+                from google_sheets_sync import sync_absolute_to_sheets
+                # Get the saved record to sync
+                if USE_POSTGRES:
+                    c.execute('SELECT * FROM labels WHERE file_path = %s', (file_path,))
+                else:
+                    c.execute('SELECT * FROM labels WHERE file_path = ?', (file_path,))
+                record = c.fetchone()
+                
+                if record:
+                    if USE_POSTGRES:
+                        from psycopg2.extras import RealDictCursor
+                        # Re-fetch with dict cursor for easier access
+                        dict_cursor = conn.cursor(cursor_factory=RealDictCursor)
+                        dict_cursor.execute('SELECT * FROM labels WHERE file_path = %s', (file_path,))
+                        record_dict = dict(dict_cursor.fetchone())
+                        dict_cursor.close()
+                    else:
+                        # Convert SQLite row to dict
+                        columns = [desc[0] for desc in c.description]
+                        record_dict = dict(zip(columns, record))
+                    
+                    sync_absolute_to_sheets(record_dict)
+            except ImportError:
+                # Google Sheets sync not available, skip silently
+                pass
+            except Exception as sync_error:
+                # Don't fail if Google Sheets sync fails
+                import traceback
+                print(f"Warning: Google Sheets sync failed: {sync_error}\n{traceback.format_exc()}")
+            
             return jsonify({'success': True})
         except Exception as db_error:
             conn.rollback()
@@ -609,6 +642,18 @@ def delete_label(file_path):
     
     deleted = c.rowcount
     conn.commit()
+    
+    # Delete from Google Sheets if configured
+    if deleted > 0:
+        try:
+            from google_sheets_sync import delete_absolute_from_sheets
+            delete_absolute_from_sheets(file_path)
+        except ImportError:
+            pass
+        except Exception as sync_error:
+            import traceback
+            print(f"Warning: Google Sheets delete failed: {sync_error}\n{traceback.format_exc()}")
+    
     conn.close()
     
     if deleted > 0:
@@ -618,54 +663,61 @@ def delete_label(file_path):
 
 @app.route('/api/labels/export', methods=['GET'])
 def export_labels():
-    """Export all labels as CSV"""
+    """Export all labels as CSV - matching Google Sheets format"""
     conn = get_db_connection()
-    
-    if USE_POSTGRES:
-        c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute('SELECT file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes FROM labels ORDER BY file_name')
-        labels = [dict(row) for row in c.fetchall()]
-    else:
-        c = conn.cursor()
-        c.execute('SELECT file_name, quality, reconstruction, reconstruction_scores, labeler_name, notes FROM labels ORDER BY file_name')
-        labels = [dict(row) for row in c.fetchall()]
-    
-    conn.close()
-    
-    # Generate CSV
-    csv_lines = ['File,Quality,Reconstruction,Reconstruction_Scores,Labeler_Name,Notes']
-    for label in labels:
-        file_name = label['file_name']
-        quality = label.get('quality') or '-'
-        
-        # Parse reconstruction (can be JSON list or single value)
-        reconstruction = label.get('reconstruction') or '-'
-        if reconstruction and reconstruction != '-':
-            try:
-                recon_list = json.loads(reconstruction) if isinstance(reconstruction, str) else reconstruction
-                if isinstance(recon_list, list):
-                    reconstruction = '; '.join(recon_list)
-            except:
-                pass
-        
-        # Parse reconstruction scores
-        scores = label.get('reconstruction_scores') or '-'
-        if scores and scores != '-':
-            try:
-                scores_dict = json.loads(scores) if isinstance(scores, str) else scores
-                if isinstance(scores_dict, dict):
-                    scores = '; '.join([f"{k}: {v}" for k, v in scores_dict.items()])
-            except:
-                pass
-        
-        labeler_name = label.get('labeler_name') or '-'
-        notes = label.get('notes') or '-'
-        # Escape quotes in notes for CSV
-        notes_escaped = notes.replace('"', '""') if notes != '-' else '-'
-        
-        csv_lines.append(f'{file_name},{quality},"{reconstruction}","{scores}",{labeler_name},"{notes_escaped}"')
-    
-    return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv'}
+
+    try:
+        # Get all labels
+        if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute('SELECT * FROM labels ORDER BY created_at DESC')
+            labels = [dict(row) for row in c.fetchall()]
+        else:
+            c = conn.cursor()
+            c.execute('PRAGMA table_info(labels)')
+            columns = [row[1] for row in c.fetchall()]
+            c.execute('SELECT * FROM labels ORDER BY created_at DESC')
+            labels = []
+            for row in c.fetchall():
+                label_dict = {}
+                for i, col in enumerate(columns):
+                    label_dict[col] = row[i]
+                labels.append(label_dict)
+
+        conn.close()
+
+        if not labels:
+            return 'File_Path,File_Name,Quality,Reconstruction,Reconstruction_Scores,Labeler_Name,Notes,Created_At,Updated_At\nNo labels found', 200, {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="labels_export.csv"'}
+
+        # CSV header matching Google Sheets exactly
+        csv_lines = ['File_Path,File_Name,Quality,Reconstruction,Reconstruction_Scores,Labeler_Name,Notes,Created_At,Updated_At']
+
+        for label in labels:
+            file_path = label.get('file_path', '') or ''
+            file_name = label.get('file_name', '') or ''
+            quality = label.get('quality', '') or ''
+            reconstruction = label.get('reconstruction', '') or ''
+            reconstruction_scores = label.get('reconstruction_scores', '') or ''
+            labeler_name = label.get('labeler_name', '') or ''
+            notes = label.get('notes', '') or ''
+            created_at = str(label.get('created_at', '') or '')
+            updated_at = str(label.get('updated_at', '') or '')
+
+            # Escape quotes for CSV
+            notes_escaped = notes.replace('"', '""')
+            reconstruction_escaped = reconstruction.replace('"', '""')
+            reconstruction_scores_escaped = reconstruction_scores.replace('"', '""')
+
+            csv_lines.append(f'"{file_path}","{file_name}","{quality}","{reconstruction_escaped}",'
+                           f'"{reconstruction_scores_escaped}","{labeler_name}","{notes_escaped}",'
+                           f'"{created_at}","{updated_at}"')
+
+        return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv; charset=utf-8',
+                                            'Content-Disposition': 'attachment; filename="labels_export.csv"'}
+    except Exception as e:
+        conn.close()
+        import traceback
+        return f'Error exporting labels: {str(e)}\n{traceback.format_exc()}', 500
 
 @app.route('/api/pairwise', methods=['POST'])
 def save_pairwise_comparison():
@@ -717,6 +769,30 @@ def save_pairwise_comparison():
                 ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
             
             conn.commit()
+            
+            # Sync to Google Sheets if configured (before closing connection)
+            try:
+                from google_sheets_sync import sync_pairwise_to_sheets
+                from datetime import datetime
+                sync_pairwise_to_sheets({
+                    'image1_path': image1_path,
+                    'image1_name': image1_name,
+                    'image2_path': image2_path,
+                    'image2_name': image2_name,
+                    'reconstruction_type': reconstruction_type,
+                    'winner': winner,
+                    'labeler_name': labeler_name,
+                    'notes': notes,
+                    'created_at': datetime.now().isoformat()
+                })
+            except ImportError:
+                # Google Sheets sync not available, skip silently
+                pass
+            except Exception as sync_error:
+                # Don't fail if Google Sheets sync fails
+                import traceback
+                print(f"Warning: Google Sheets sync failed: {sync_error}\n{traceback.format_exc()}")
+            
             return jsonify({'success': True})
         except Exception as db_error:
             conn.rollback()
@@ -731,25 +807,84 @@ def save_pairwise_comparison():
 @app.route('/api/pairwise', methods=['GET'])
 def get_pairwise_comparisons():
     """Get all pairwise comparisons"""
-    conn = get_db_connection()
-    
-    if USE_POSTGRES:
-        c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-        comparisons = [dict(row) for row in c.fetchall()]
-    else:
-        c = conn.cursor()
-        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-        comparisons = [dict(row) for row in c.fetchall()]
-    
-    conn.close()
-    return jsonify(comparisons)
+    try:
+        conn = get_db_connection()
+        
+        # Check if table exists first
+        if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'pairwise_comparisons'
+                );
+            """)
+            table_exists = c.fetchone()[0]
+        else:
+            c = conn.cursor()
+            c.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='pairwise_comparisons'
+            """)
+            table_exists = c.fetchone() is not None
+        
+        if not table_exists:
+            conn.close()
+            # Table doesn't exist - return empty list (init_db should create it, but handle gracefully)
+            return jsonify([])
+        
+        # Table exists, query it
+        if USE_POSTGRES:
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            comparisons = [dict(row) for row in c.fetchall()]
+        else:
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            # Convert to list of dicts
+            c.execute('PRAGMA table_info(pairwise_comparisons)')
+            columns = [row[1] for row in c.fetchall()]
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            comparisons = []
+            for row in c.fetchall():
+                comp_dict = {}
+                for i, col in enumerate(columns):
+                    comp_dict[col] = row[i]
+                comparisons.append(comp_dict)
+        
+        conn.close()
+        print(f"DEBUG: Returning {len(comparisons)} pairwise comparisons")
+        return jsonify(comparisons)
+    except Exception as e:
+        import traceback
+        error_msg = f"Error in get_pairwise_comparisons: {e}\n{traceback.format_exc()}"
+        print(error_msg)
+        # Log to stderr so it shows up in Flask logs
+        import sys
+        sys.stderr.write(error_msg + "\n")
+        # Return empty list on error rather than crashing
+        return jsonify([])
 
 @app.route('/api/pairwise/<int:comp_id>', methods=['DELETE'])
 def delete_pairwise_comparison(comp_id):
     """Delete a pairwise comparison"""
     conn = get_db_connection()
     c = conn.cursor()
+    
+    # Get the record before deleting (for Google Sheets sync)
+    if USE_POSTGRES:
+        from psycopg2.extras import RealDictCursor
+        dict_cursor = conn.cursor(cursor_factory=RealDictCursor)
+        dict_cursor.execute('SELECT * FROM pairwise_comparisons WHERE id = %s', (comp_id,))
+        record = dict_cursor.fetchone()
+        dict_cursor.close()
+    else:
+        c.execute('PRAGMA table_info(pairwise_comparisons)')
+        columns = [row[1] for row in c.fetchall()]
+        c.execute('SELECT * FROM pairwise_comparisons WHERE id = ?', (comp_id,))
+        row = c.fetchone()
+        if row:
+            record = dict(zip(columns, row))
+        else:
+            record = None
     
     if USE_POSTGRES:
         c.execute('DELETE FROM pairwise_comparisons WHERE id = %s', (comp_id,))
@@ -758,6 +893,22 @@ def delete_pairwise_comparison(comp_id):
     
     deleted = c.rowcount
     conn.commit()
+    
+    # Delete from Google Sheets if configured
+    if deleted > 0 and record:
+        try:
+            from google_sheets_sync import delete_pairwise_from_sheets
+            delete_pairwise_from_sheets(
+                record.get('image1_path', ''),
+                record.get('image2_path', ''),
+                record.get('reconstruction_type', '')
+            )
+        except ImportError:
+            pass
+        except Exception as sync_error:
+            import traceback
+            print(f"Warning: Google Sheets delete failed: {sync_error}\n{traceback.format_exc()}")
+    
     conn.close()
     
     if deleted > 0:
@@ -767,31 +918,69 @@ def delete_pairwise_comparison(comp_id):
 
 @app.route('/api/pairwise/export', methods=['GET'])
 def export_pairwise_comparisons():
-    """Export all pairwise comparisons as CSV"""
+    """Export all pairwise comparisons as CSV - matching Google Sheets format"""
     conn = get_db_connection()
-    
-    if USE_POSTGRES:
-        c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-        comparisons = [dict(row) for row in c.fetchall()]
-    else:
-        c = conn.cursor()
-        c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
-        comparisons = [dict(row) for row in c.fetchall()]
-    
-    conn.close()
-    
-    # Generate CSV
-    csv_lines = ['Image1_Path,Image1_Name,Image2_Path,Image2_Name,Reconstruction_Type,Winner,Labeler_Name,Notes,Created_At']
-    for comp in comparisons:
-        csv_lines.append(f'{comp["image1_path"]},{comp["image1_name"]},{comp["image2_path"]},{comp["image2_name"]},'
-                         f'{comp["reconstruction_type"]},{comp["winner"]},{comp.get("labeler_name", "-")},'
-                         f'"{comp.get("notes", "-").replace('"', '""')}",{comp.get("created_at", "-")}')
-    
-    return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv'}
+
+    try:
+        # Get all comparisons
+        if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            comparisons = [dict(row) for row in c.fetchall()]
+        else:
+            c = conn.cursor()
+            c.execute('PRAGMA table_info(pairwise_comparisons)')
+            columns = [row[1] for row in c.fetchall()]
+            c.execute('SELECT * FROM pairwise_comparisons ORDER BY created_at DESC')
+            comparisons = []
+            for row in c.fetchall():
+                comp_dict = {}
+                for i, col in enumerate(columns):
+                    comp_dict[col] = row[i]
+                comparisons.append(comp_dict)
+
+        conn.close()
+
+        if not comparisons:
+            return 'Image1_Path,Image1_Name,Image2_Path,Image2_Name,Reconstruction_Type,Winner,Labeler_Name,Notes,Created_At\nNo pairwise comparisons found', 200, {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pairwise_comparisons_export.csv"'}
+
+        # CSV header matching Google Sheets exactly
+        csv_lines = ['Image1_Path,Image1_Name,Image2_Path,Image2_Name,Reconstruction_Type,Winner,Labeler_Name,Notes,Created_At']
+
+        for comp in comparisons:
+            image1_path = comp.get('image1_path', '') or ''
+            image1_name = comp.get('image1_name', '') or ''
+            image2_path = comp.get('image2_path', '') or ''
+            image2_name = comp.get('image2_name', '') or ''
+            reconstruction_type = comp.get('reconstruction_type', '') or ''
+            winner = comp.get('winner', '') or ''
+            labeler_name = comp.get('labeler_name', '') or ''
+            notes = comp.get('notes', '') or ''
+            created_at = str(comp.get('created_at', '') or '')
+
+            # Escape quotes for CSV
+            notes_escaped = notes.replace('"', '""')
+
+            csv_lines.append(f'"{image1_path}","{image1_name}","{image2_path}","{image2_name}",'
+                           f'"{reconstruction_type}","{winner}","{labeler_name}",'
+                           f'"{notes_escaped}","{created_at}"')
+
+        return '\n'.join(csv_lines), 200, {'Content-Type': 'text/csv; charset=utf-8',
+                                            'Content-Disposition': 'attachment; filename="pairwise_comparisons_export.csv"'}
+    except Exception as e:
+        conn.close()
+        import traceback
+        return f'Error exporting pairwise comparisons: {str(e)}\n{traceback.format_exc()}', 500
 
 # Initialize database on startup (for both local and cloud)
 init_db()
+
+# Auto-restore from Google Sheets if database is empty
+try:
+    from google_sheets_sync import restore_from_sheets_if_empty
+    restore_from_sheets_if_empty(get_db_connection, USE_POSTGRES)
+except Exception as e:
+    print(f"Note: Could not check/restore from Google Sheets: {e}")
 
 if __name__ == '__main__':
     # Get port from environment (for cloud) or use default

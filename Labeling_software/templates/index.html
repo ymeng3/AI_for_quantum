@@ -23,8 +23,8 @@
                 <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <div class="mode-selector" style="display: flex; gap: 10px; align-items: center;">
                         <label style="font-size: 13px; color: #666;">Mode:</label>
-                        <button id="absoluteModeBtn" class="mode-btn" data-mode="absolute">Absolute Scoring</button>
                         <button id="pairwiseModeBtn" class="mode-btn active" data-mode="pairwise">Pairwise Comparison</button>
+                        <button id="absoluteModeBtn" class="mode-btn" data-mode="absolute">Absolute Scoring</button>
                     </div>
                     <button id="randomBtn" class="save-btn" style="background-color: #6c757d; padding: 6px 12px; font-size: 12px;">Random Image</button>
                     <button id="pairwiseRandomBtn" class="save-btn" style="background-color: #6c757d; padding: 6px 12px; font-size: 12px; display: none;">Random Pair</button>
@@ -63,32 +63,6 @@
                     <div id="reconstructionCheckboxes" class="checkbox-group">
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
-                                <input type="checkbox" class="reconstruction-checkbox" data-value="HTR" value="HTR">
-                                <span>HTR</span>
-                            </label>
-                            <div class="reconstruction-quality-control" data-recon="HTR" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
-                                    Quality Score: <span class="quality-score-value" data-recon="HTR">5</span>/10
-                                </label>
-                                <input type="range" class="reconstruction-quality-slider" data-recon="HTR" min="0" max="10" value="5" 
-                                       style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
-                            </div>
-                        </div>
-                        <div class="reconstruction-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="reconstruction-checkbox" data-value="√13 x √13 R33.7°" value="√13 x √13 R33.7°">
-                                <span>√13 x √13 R33.7°</span>
-                            </label>
-                            <div class="reconstruction-quality-control" data-recon="√13 x √13 R33.7°" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
-                                    Quality Score: <span class="quality-score-value" data-recon="√13 x √13 R33.7°">5</span>/10
-                                </label>
-                                <input type="range" class="reconstruction-quality-slider" data-recon="√13 x √13 R33.7°" min="0" max="10" value="5" 
-                                       style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
-                            </div>
-                        </div>
-                        <div class="reconstruction-item">
-                            <label class="checkbox-label">
                                 <input type="checkbox" class="reconstruction-checkbox" data-value="(1 x 1)" value="(1 x 1)">
                                 <span>(1 x 1)</span>
                             </label>
@@ -102,27 +76,66 @@
                         </div>
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
-                                <input type="checkbox" class="reconstruction-checkbox" data-value="(2 x 2)" value="(2 x 2)">
-                                <span>(2 x 2)</span>
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="Twinned(2 x 1)" value="Twinned(2 x 1)">
+                                <span>Twinned(2 x 1)</span>
                             </label>
-                            <div class="reconstruction-quality-control" data-recon="(2 x 2)" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                            <div class="reconstruction-quality-control" data-recon="Twinned(2 x 1)" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
                                 <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
-                                    Quality Score: <span class="quality-score-value" data-recon="(2 x 2)">5</span>/10
+                                    Quality Score: <span class="quality-score-value" data-recon="Twinned(2 x 1)">5</span>/10
                                 </label>
-                                <input type="range" class="reconstruction-quality-slider" data-recon="(2 x 2)" min="0" max="10" value="5" 
+                                <input type="range" class="reconstruction-quality-slider" data-recon="Twinned(2 x 1)" min="0" max="10" value="5" 
                                        style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
                             </div>
                         </div>
                         <div class="reconstruction-item">
                             <label class="checkbox-label">
-                                <input type="checkbox" class="reconstruction-checkbox" data-value="Other" value="Other">
-                                <span>Other</span>
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="c(6 x 2)" value="c(6 x 2)">
+                                <span>c(6 x 2)</span>
                             </label>
-                            <div class="reconstruction-quality-control" data-recon="Other" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                            <div class="reconstruction-quality-control" data-recon="c(6 x 2)" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
                                 <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
-                                    Quality Score: <span class="quality-score-value" data-recon="Other">5</span>/10
+                                    Quality Score: <span class="quality-score-value" data-recon="c(6 x 2)">5</span>/10
                                 </label>
-                                <input type="range" class="reconstruction-quality-slider" data-recon="Other" min="0" max="10" value="5" 
+                                <input type="range" class="reconstruction-quality-slider" data-recon="c(6 x 2)" min="0" max="10" value="5" 
+                                       style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="(√13 x √13)" value="(√13 x √13)">
+                                <span>(√13 × √13)</span>
+                            </label>
+                            <div class="reconstruction-quality-control" data-recon="(√13 x √13)" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="(√13 x √13)">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="(√13 x √13)" min="0" max="10" value="5" 
+                                       style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="HTR" value="HTR">
+                                <span>HTR</span>
+                            </label>
+                            <div class="reconstruction-quality-control" data-recon="HTR" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="HTR">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="HTR" min="0" max="10" value="5" 
+                                       style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
+                            </div>
+                        </div>
+                        <div class="reconstruction-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="reconstruction-checkbox" data-value="Bad" value="Bad">
+                                <span>Bad</span>
+                            </label>
+                            <div class="reconstruction-quality-control" data-recon="Bad" style="display: none; margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">
+                                    Quality Score: <span class="quality-score-value" data-recon="Bad">5</span>/10
+                                </label>
+                                <input type="range" class="reconstruction-quality-slider" data-recon="Bad" min="0" max="10" value="5" 
                                        style="width: 100%; min-width: 300px; height: 8px; border-radius: 3px; background: #ddd; outline: none;">
                             </div>
                         </div>
@@ -161,6 +174,12 @@
                             <input type="range" class="brightness-slider-pairwise" data-image="1" min="0" max="400" value="100" 
                                    style="width: 100%; height: 4px;">
                         </div>
+                        <div style="width: 100%; padding: 8px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: #856404;">
+                                <input type="checkbox" id="markBadImage1" class="mark-bad-checkbox" data-image="1" disabled style="width: 16px; height: 16px; cursor: pointer;">
+                                <span>Mark this image as "Bad"</span>
+                            </label>
+                        </div>
                     </div>
                     
                     <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 80px;">
@@ -182,6 +201,12 @@
                             <input type="range" class="brightness-slider-pairwise" data-image="2" min="0" max="400" value="100" 
                                    style="width: 100%; height: 4px;">
                         </div>
+                        <div style="width: 100%; padding: 8px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: #856404;">
+                                <input type="checkbox" id="markBadImage2" class="mark-bad-checkbox" data-image="2" disabled style="width: 16px; height: 16px; cursor: pointer;">
+                                <span>Mark this image as "Bad"</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
@@ -201,26 +226,6 @@
                         
                         <div class="pairwise-reconstruction-group" style="display: flex; flex-direction: column; gap: 15px;">
                             <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">HTR</label>
-                                <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="pairwise-btn" data-recon="HTR" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
-                                    <button class="pairwise-btn" data-recon="HTR" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
-                                    <button class="pairwise-btn" data-recon="HTR" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
-                                    <button class="pairwise-btn" data-recon="HTR" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
-                                </div>
-                            </div>
-                            
-                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">√13 x √13 R33.7°</label>
-                                <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
-                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
-                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
-                                    <button class="pairwise-btn" data-recon="√13 x √13 R33.7°" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
-                                </div>
-                            </div>
-                            
-                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
                                 <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">(1 x 1)</label>
                                 <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
                                     <button class="pairwise-btn" data-recon="(1 x 1)" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
@@ -231,24 +236,45 @@
                             </div>
                             
                             <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">(2 x 2)</label>
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">Twinned(2 x 1)</label>
                                 <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
-                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
-                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
-                                    <button class="pairwise-btn" data-recon="(2 x 2)" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
+                                    <button class="pairwise-btn" data-recon="Twinned(2 x 1)" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="Twinned(2 x 1)" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="Twinned(2 x 1)" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                    <button class="pairwise-btn" data-recon="Twinned(2 x 1)" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
                                 </div>
                             </div>
                             
                             <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">Other</label>
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">c(6 x 2)</label>
                                 <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <button class="pairwise-btn" data-recon="Other" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
-                                    <button class="pairwise-btn" data-recon="Other" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
-                                    <button class="pairwise-btn" data-recon="Other" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
-                                    <button class="pairwise-btn" data-recon="Other" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
+                                    <button class="pairwise-btn" data-recon="c(6 x 2)" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="c(6 x 2)" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="c(6 x 2)" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                    <button class="pairwise-btn" data-recon="c(6 x 2)" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
                                 </div>
                             </div>
+                            
+                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">(√13 × √13)</label>
+                                <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="pairwise-btn" data-recon="(√13 x √13)" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="(√13 x √13)" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="(√13 x √13)" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                    <button class="pairwise-btn" data-recon="(√13 x √13)" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
+                                </div>
+                            </div>
+                            
+                            <div class="pairwise-reconstruction-item" style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #333; font-size: 13px;">HTR</label>
+                                <div class="pairwise-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="1" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 1</button>
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="tie" style="padding: 10px 15px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Tie</button>
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="2" style="flex: 1; min-width: 80px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Image 2</button>
+                                    <button class="pairwise-btn" data-recon="HTR" data-winner="not_apply" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 13px;">Not Apply</button>
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
                     
@@ -261,6 +287,9 @@
                     <div class="action-buttons" style="margin-top: 20px;">
                         <button id="pairwiseSaveBtn" class="save-btn">Save Comparison</button>
                         <button id="pairwiseClearBtn" class="clear-btn">Clear</button>
+                    </div>
+                    <div id="pairwiseSaveNotification" style="margin-top: 10px; padding: 10px; background-color: #4CAF50; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-align: center; display: none;">
+                        ✓ Comparison saved!
                     </div>
                     <div style="margin-top: 10px; padding: 10px; background-color: #f0f7ff; border-radius: 4px; font-size: 12px; color: #666;">
                         💡 <strong>Tip:</strong> Click images in the Image Bank to select them. First click = Image 1, second click = Image 2. Click a selected image again to deselect it.
@@ -307,21 +336,33 @@
                         <span class="collapse-icon">▼</span>
                     </button>
                     <h2>Collected Labels</h2>
+                    <a href="https://docs.google.com/spreadsheets/d/1zykznJcFEYuV9u7vdaKU7DPpnrzXMJ3DeqNn-LqMSkI/edit?gid=349882485#gid=349882485" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       style="display: inline-flex; align-items: center; gap: 5px; color: #4285f4; text-decoration: none; font-size: 14px; font-weight: normal; margin-left: 10px; padding: 4px 8px; border-radius: 4px; transition: background-color 0.2s;"
+                       onmouseover="this.style.backgroundColor='#f0f0f0'"
+                       onmouseout="this.style.backgroundColor='transparent'"
+                       title="Open in Google Sheets">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
+                            <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19ZM17 12H15V15H12V17H15V20H17V17H20V15H17V12Z" fill="currentColor"/>
+                        </svg>
+                        <span>View in Google Sheets</span>
+                    </a>
                 </div>
                 <button id="exportBtn" class="export-btn">Export CSV</button>
             </div>
             <div class="section-content" data-section="labels">
             <div class="labels-tabs" style="display: flex; border-bottom: 2px solid #e0e0e0; background-color: #fafafa;">
-                <button id="absoluteLabelsTab" class="label-tab active" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
-                    Absolute Scoring
-                </button>
-                <button id="pairwiseLabelsTab" class="label-tab" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                <button id="pairwiseLabelsTab" class="label-tab active" data-tab="pairwise" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
                     Pairwise Comparison
+                </button>
+                <button id="absoluteLabelsTab" class="label-tab" data-tab="absolute" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent;">
+                    Absolute Scoring
                 </button>
             </div>
             <div class="table-container">
                 <!-- Absolute Scoring Labels Table -->
-                <div id="absoluteLabelsSection" class="labels-section">
+                <div id="absoluteLabelsSection" class="labels-section" style="display: none;">
                     <table id="labelsTable">
                         <thead>
                             <tr>
@@ -340,7 +381,7 @@
                 </div>
                 
                 <!-- Pairwise Comparison Labels Table -->
-                <div id="pairwiseLabelsSection" class="labels-section" style="display: none;">
+                <div id="pairwiseLabelsSection" class="labels-section">
                     <table id="pairwiseTable">
                         <thead>
                             <tr>
@@ -363,7 +404,7 @@
         </div>
     </div>
     
-    <script src="{{ url_for('static', filename='app.js') }}?v=5"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=21"></script>
 </body>
 </html>
 
