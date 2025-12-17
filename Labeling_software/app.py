@@ -9,6 +9,10 @@ import mimetypes
 app = Flask(__name__)
 CORS(app)
 
+# App version - increment to force Render cache refresh
+APP_VERSION = "2.1.0"
+print(f"=== RHEED Labeling Software v{APP_VERSION} starting ===")
+
 # Configuration
 # For local development, use local data directory
 # For cloud, images can be in Google Drive or cloud storage
@@ -345,6 +349,19 @@ def get_file_id_from_api(image_path):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/debug')
+def debug_info():
+    """Debug endpoint to check deployment status"""
+    sample_2025_images = [k for k in GOOGLE_DRIVE_IMAGE_MAP.keys() if '2025-10-04' in k][:5]
+    return jsonify({
+        'version': APP_VERSION,
+        'use_google_drive': USE_GOOGLE_DRIVE,
+        'data_dir': str(DATA_DIR) if DATA_DIR else None,
+        'total_images_in_map': len(GOOGLE_DRIVE_IMAGE_MAP),
+        'sample_2025_images': sample_2025_images,
+        'allowed_folders': ALLOWED_TRAJECTORY_FOLDERS
+    })
 
 @app.route('/api/images')
 def get_images():
