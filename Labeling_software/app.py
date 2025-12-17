@@ -29,7 +29,8 @@ GOOGLE_DRIVE_IMAGE_MAP = {}
 # Cache for file IDs fetched via API (path -> file_id)
 GOOGLE_DRIVE_FILE_ID_CACHE = {}
 
-if USE_GOOGLE_DRIVE and GOOGLE_DRIVE_IMAGES_FILE.exists():
+# Always load the image map if the file exists (needed for cloud deployment)
+if GOOGLE_DRIVE_IMAGES_FILE.exists():
     try:
         import json
         with open(GOOGLE_DRIVE_IMAGES_FILE, 'r') as f:
@@ -38,6 +39,11 @@ if USE_GOOGLE_DRIVE and GOOGLE_DRIVE_IMAGES_FILE.exists():
             print(f"Loaded {len(GOOGLE_DRIVE_IMAGE_MAP)} images from Google Drive mapping")
     except Exception as e:
         print(f"Error loading Google Drive image map: {e}")
+
+# If no local data, enable Google Drive mode
+if DATA_DIR is None and GOOGLE_DRIVE_IMAGE_MAP:
+    USE_GOOGLE_DRIVE = True
+    print("No local data directory - using Google Drive mode")
 
 # Database configuration - use PostgreSQL in cloud, SQLite locally
 DATABASE_URL = os.environ.get('DATABASE_URL')
