@@ -70,23 +70,30 @@ def sync_pairwise_to_sheets(comparison_data, client=None):
         # Get or create the pairwise tab
         try:
             worksheet = spreadsheet.worksheet(GOOGLE_SHEETS_PAIRWISE_TAB)
-            # Ensure headers exist and are correct
+            # Check if headers need updating (add new columns to the right)
             headers = worksheet.row_values(1)
             expected_headers = ['Image1_Path', 'Image1_Name', 'Image2_Path', 'Image2_Name',
-                              'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At']
-            if not headers or headers != expected_headers:
-                # Clear and add correct headers
-                worksheet.clear()
+                              'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At',
+                              'Brightness_1', 'Brightness_2', 'Confidence']
+            if not headers:
+                # No headers, add all
                 worksheet.append_row(expected_headers)
+            elif len(headers) < 12:
+                # Old headers without new columns - add new columns to the right
+                # Update header row to include new columns
+                worksheet.update('J1:L1', [['Brightness_1', 'Brightness_2', 'Confidence']])
         except:
-            worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_PAIRWISE_TAB, rows=1000, cols=10)
-            # Add headers
+            worksheet = spreadsheet.add_worksheet(title=GOOGLE_SHEETS_PAIRWISE_TAB, rows=1000, cols=15)
+            # Add headers with new columns
             worksheet.append_row([
                 'Image1_Path', 'Image1_Name', 'Image2_Path', 'Image2_Name',
-                'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At'
+                'Reconstruction_Type', 'Winner', 'Labeler_Name', 'Notes', 'Created_At',
+                'Brightness_1', 'Brightness_2', 'Confidence'
             ])
         
-        # Append the new row (ensure all 9 columns)
+        # Append the new row (ensure all 12 columns)
+        brightness_1 = comparison_data.get('brightness_1')
+        brightness_2 = comparison_data.get('brightness_2')
         row = [
             str(comparison_data.get('image1_path', '')),
             str(comparison_data.get('image1_name', '')),
@@ -96,12 +103,15 @@ def sync_pairwise_to_sheets(comparison_data, client=None):
             str(comparison_data.get('winner', '')),
             str(comparison_data.get('labeler_name', '')),
             str(comparison_data.get('notes', '')),
-            str(comparison_data.get('created_at', datetime.now().isoformat()))
+            str(comparison_data.get('created_at', datetime.now().isoformat())),
+            str(brightness_1) if brightness_1 is not None else '',
+            str(brightness_2) if brightness_2 is not None else '',
+            str(comparison_data.get('confidence', 'Confident'))
         ]
-        # Ensure row has exactly 9 values
-        while len(row) < 9:
+        # Ensure row has exactly 12 values
+        while len(row) < 12:
             row.append('')
-        worksheet.append_row(row[:9])
+        worksheet.append_row(row[:12])
         return True
     except Exception as e:
         import traceback

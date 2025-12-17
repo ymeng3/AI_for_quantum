@@ -107,6 +107,13 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Add new columns for brightness and confidence (for existing databases)
+        try:
+            c.execute('ALTER TABLE pairwise_comparisons ADD COLUMN IF NOT EXISTS brightness_1 REAL')
+            c.execute('ALTER TABLE pairwise_comparisons ADD COLUMN IF NOT EXISTS brightness_2 REAL')
+            c.execute('ALTER TABLE pairwise_comparisons ADD COLUMN IF NOT EXISTS confidence TEXT')
+        except:
+            pass  # Columns might already exist
     else:
         c.execute('''
             CREATE TABLE IF NOT EXISTS labels (
@@ -151,7 +158,20 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-    
+        # Add new columns for brightness and confidence (for existing databases)
+        try:
+            c.execute('ALTER TABLE pairwise_comparisons ADD COLUMN brightness_1 REAL')
+        except:
+            pass
+        try:
+            c.execute('ALTER TABLE pairwise_comparisons ADD COLUMN brightness_2 REAL')
+        except:
+            pass
+        try:
+            c.execute('ALTER TABLE pairwise_comparisons ADD COLUMN confidence TEXT')
+        except:
+            pass
+
     conn.commit()
     conn.close()
 
@@ -735,6 +755,10 @@ def save_pairwise_comparison():
         winner = data.get('winner')  # '1', '2', 'tie', or 'not_apply'
         labeler_name = data.get('labeler_name', '').strip()
         notes = data.get('notes', '').strip() if data.get('notes') else ''
+        # New fields for brightness and confidence
+        brightness_1 = data.get('brightness_1')  # float or None
+        brightness_2 = data.get('brightness_2')  # float or None
+        confidence = data.get('confidence', 'Confident')  # Default to 'Confident'
         
         # Validate required fields
         if not all([image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner]):
@@ -757,16 +781,20 @@ def save_pairwise_comparison():
         try:
             if USE_POSTGRES:
                 c.execute('''
-                    INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
-                                                     reconstruction_type, winner, labeler_name, notes)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
+                    INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name,
+                                                     reconstruction_type, winner, labeler_name, notes,
+                                                     brightness_1, brightness_2, confidence)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes,
+                      brightness_1, brightness_2, confidence))
             else:
                 c.execute('''
-                    INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name, 
-                                                     reconstruction_type, winner, labeler_name, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes))
+                    INSERT INTO pairwise_comparisons (image1_path, image1_name, image2_path, image2_name,
+                                                     reconstruction_type, winner, labeler_name, notes,
+                                                     brightness_1, brightness_2, confidence)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (image1_path, image1_name, image2_path, image2_name, reconstruction_type, winner, labeler_name, notes,
+                      brightness_1, brightness_2, confidence))
             
             conn.commit()
             
@@ -783,7 +811,10 @@ def save_pairwise_comparison():
                     'winner': winner,
                     'labeler_name': labeler_name,
                     'notes': notes,
-                    'created_at': datetime.now().isoformat()
+                    'created_at': datetime.now().isoformat(),
+                    'brightness_1': brightness_1,
+                    'brightness_2': brightness_2,
+                    'confidence': confidence
                 })
             except ImportError:
                 # Google Sheets sync not available, skip silently

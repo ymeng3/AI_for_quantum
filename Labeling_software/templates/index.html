@@ -280,10 +280,20 @@
                     
                     <div class="label-group" style="margin-top: 20px;">
                         <label for="pairwiseNotesInput">Notes (Optional):</label>
-                        <textarea id="pairwiseNotesInput" placeholder="Add any notes about this comparison..." 
+                        <textarea id="pairwiseNotesInput" placeholder="Add any notes about this comparison..."
                                   style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
                     </div>
-                    
+
+                    <!-- Confidence Buttons -->
+                    <div class="label-group" style="margin-top: 15px;">
+                        <label>Confidence Level:</label>
+                        <div class="confidence-buttons" style="display: flex; gap: 8px; margin-top: 5px;">
+                            <button type="button" class="confidence-btn active" data-confidence="Confident" style="flex: 1; padding: 8px 12px; border: 2px solid #4CAF50; background-color: #4CAF50; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Confident</button>
+                            <button type="button" class="confidence-btn" data-confidence="Somewhat sure" style="flex: 1; padding: 8px 12px; border: 2px solid #FF9800; background-color: white; color: #FF9800; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Somewhat sure</button>
+                            <button type="button" class="confidence-btn" data-confidence="Guessing" style="flex: 1; padding: 8px 12px; border: 2px solid #f44336; background-color: white; color: #f44336; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Guessing</button>
+                        </div>
+                    </div>
+
                     <div class="action-buttons" style="margin-top: 20px;">
                         <button id="pairwiseSaveBtn" class="save-btn">Save Comparison</button>
                         <button id="pairwiseClearBtn" class="clear-btn">Clear</button>
@@ -404,7 +414,7 @@
         </div>
     </div>
     
-    <script src="{{ url_for('static', filename='app.js') }}?v=22"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=23"></script>
 </body>
 </html>
 

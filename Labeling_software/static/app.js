@@ -19,6 +19,7 @@ let pairwiseImage2 = null;
 let pairwiseComparisons = {}; // {reconstruction_type: winner} where winner is '1', '2', or 'tie'
 let pairwiseLabelerName = '';
 let pairwiseNotes = '';
+let pairwiseConfidence = 'Confident'; // Default confidence level
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -980,10 +981,45 @@ function initializePairwiseMode() {
     document.getElementById('pairwiseLabelerName').addEventListener('input', (e) => {
         pairwiseLabelerName = e.target.value.trim();
     });
-    
+
     // Pairwise notes input
     document.getElementById('pairwiseNotesInput').addEventListener('input', (e) => {
         pairwiseNotes = e.target.value;
+    });
+
+    // Confidence button handlers
+    document.querySelectorAll('.confidence-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active from all confidence buttons
+            document.querySelectorAll('.confidence-btn').forEach(b => {
+                b.classList.remove('active');
+                const conf = b.dataset.confidence;
+                if (conf === 'Confident') {
+                    b.style.backgroundColor = 'white';
+                    b.style.color = '#4CAF50';
+                } else if (conf === 'Somewhat sure') {
+                    b.style.backgroundColor = 'white';
+                    b.style.color = '#FF9800';
+                } else if (conf === 'Guessing') {
+                    b.style.backgroundColor = 'white';
+                    b.style.color = '#f44336';
+                }
+            });
+            // Set this button as active
+            btn.classList.add('active');
+            const confidence = btn.dataset.confidence;
+            pairwiseConfidence = confidence;
+            if (confidence === 'Confident') {
+                btn.style.backgroundColor = '#4CAF50';
+                btn.style.color = 'white';
+            } else if (confidence === 'Somewhat sure') {
+                btn.style.backgroundColor = '#FF9800';
+                btn.style.color = 'white';
+            } else if (confidence === 'Guessing') {
+                btn.style.backgroundColor = '#f44336';
+                btn.style.color = 'white';
+            }
+        });
     });
     
     // Mark as Bad checkboxes - use direct onclick to ensure it works
@@ -1452,6 +1488,12 @@ function savePairwiseComparison() {
         return;
     }
 
+    // Capture brightness values from sliders
+    const brightnessSlider1 = document.getElementById('brightnessSlider1');
+    const brightnessSlider2 = document.getElementById('brightnessSlider2');
+    const brightness1 = brightnessSlider1 ? parseFloat(brightnessSlider1.value) : null;
+    const brightness2 = brightnessSlider2 ? parseFloat(brightnessSlider2.value) : null;
+
     // Capture current state before clearing
     const saveData = comparisons.map(recon => ({
         image1_path: pairwiseImage1.path,
@@ -1461,7 +1503,10 @@ function savePairwiseComparison() {
         reconstruction_type: recon,
         winner: pairwiseComparisons[recon],
         labeler_name: pairwiseLabelerName,
-        notes: pairwiseNotes || null
+        notes: pairwiseNotes || null,
+        brightness_1: brightness1,
+        brightness_2: brightness2,
+        confidence: pairwiseConfidence
     }));
 
     // Show notification IMMEDIATELY (optimistic UI)
@@ -1503,8 +1548,9 @@ function savePairwiseComparison() {
 function clearPairwiseComparison() {
     pairwiseComparisons = {};
     pairwiseNotes = '';
+    pairwiseConfidence = 'Confident'; // Reset to default
     document.getElementById('pairwiseNotesInput').value = '';
-    
+
     // Clear button selections
     document.querySelectorAll('.pairwise-btn').forEach(btn => {
         btn.classList.remove('active');
@@ -1512,7 +1558,26 @@ function clearPairwiseComparison() {
         btn.style.borderColor = '#ddd';
         btn.style.color = '#333';
     });
-    
+
+    // Reset confidence buttons to default (Confident)
+    document.querySelectorAll('.confidence-btn').forEach(btn => {
+        const conf = btn.dataset.confidence;
+        if (conf === 'Confident') {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#4CAF50';
+            btn.style.color = 'white';
+        } else {
+            btn.classList.remove('active');
+            if (conf === 'Somewhat sure') {
+                btn.style.backgroundColor = 'white';
+                btn.style.color = '#FF9800';
+            } else if (conf === 'Guessing') {
+                btn.style.backgroundColor = 'white';
+                btn.style.color = '#f44336';
+            }
+        }
+    });
+
     // Reset brightness sliders
     document.querySelectorAll('.brightness-slider-pairwise').forEach(slider => {
         slider.value = 100;
