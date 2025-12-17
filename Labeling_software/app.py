@@ -157,7 +157,7 @@ def init_db():
 
 # Get all image files from data directory or Google Drive
 # Only include images from specific trajectory folders
-ALLOWED_TRAJECTORY_FOLDERS = ['2022-02-04', '2022-02-06', '2022-04-11']
+ALLOWED_TRAJECTORY_FOLDERS = ['2022-02-04', '2022-02-06', '2022-04-11', '2025-10-04', '2025-10-05']
 
 def get_image_files():
     image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}

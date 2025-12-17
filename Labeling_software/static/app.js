@@ -1370,32 +1370,54 @@ async function markImageAsBad(img, slot) {
     }
 }
 
+// Helper function to check if image has any label (including Bad)
+function isImageLabeled(imgPath) {
+    const label = labels[imgPath];
+    if (!label || !label.reconstruction) {
+        return false;
+    }
+    let reconstruction = label.reconstruction;
+    if (typeof reconstruction === 'string') {
+        try {
+            reconstruction = JSON.parse(reconstruction);
+        } catch (e) {
+            reconstruction = [reconstruction];
+        }
+    }
+    // Image is labeled if it has any reconstruction type (including Bad)
+    if (Array.isArray(reconstruction)) {
+        return reconstruction.length > 0;
+    }
+    return !!reconstruction;
+}
+
 // Load a random pair of images for comparison
 function loadRandomPair() {
-    // Filter out "Bad" images for random selection
-    const validImages = images.filter(img => !isImageBad(img.path));
-    
+    // Filter out images that are labeled (including "Bad" images)
+    // This ensures previously labeled images are excluded from random pair selection
+    const validImages = images.filter(img => !isImageLabeled(img.path));
+
     if (validImages.length < 2) {
-        alert('Need at least 2 non-"Bad" images for pairwise comparison');
+        alert('Need at least 2 unlabeled images for pairwise comparison. All images may have been labeled already.');
         return;
     }
-    
+
     // Select two random different images from valid images
     let idx1 = Math.floor(Math.random() * validImages.length);
     let idx2 = Math.floor(Math.random() * validImages.length);
     while (idx2 === idx1) {
         idx2 = Math.floor(Math.random() * validImages.length);
     }
-    
+
     const img1 = validImages[idx1];
     const img2 = validImages[idx2];
-    
+
     const item1 = document.querySelector(`.image-item[data-path="${img1.path}"]`);
     const item2 = document.querySelector(`.image-item[data-path="${img2.path}"]`);
-    
+
     setPairwiseImage(1, img1, item1);
     setPairwiseImage(2, img2, item2);
-    
+
     // Force resize to ensure both images are same size
     setTimeout(() => {
         const img1 = document.getElementById('pairwiseImage1');
