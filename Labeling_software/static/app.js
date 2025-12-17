@@ -1488,9 +1488,9 @@ function savePairwiseComparison() {
         return;
     }
 
-    // Capture brightness values from sliders
-    const brightnessSlider1 = document.getElementById('brightnessSlider1');
-    const brightnessSlider2 = document.getElementById('brightnessSlider2');
+    // Capture brightness values from sliders (use class + data-image attribute)
+    const brightnessSlider1 = document.querySelector('.brightness-slider-pairwise[data-image="1"]');
+    const brightnessSlider2 = document.querySelector('.brightness-slider-pairwise[data-image="2"]');
     const brightness1 = brightnessSlider1 ? parseFloat(brightnessSlider1.value) : null;
     const brightness2 = brightnessSlider2 ? parseFloat(brightnessSlider2.value) : null;
 
