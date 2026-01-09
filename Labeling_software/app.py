@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 # App version - increment to force Render cache refresh
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 print(f"=== RHEED Labeling Software v{APP_VERSION} starting ===")
 
 # Configuration
@@ -188,46 +188,70 @@ def init_db():
 # Get all image files from data directory or Google Drive
 # Only include images from specific trajectory folders
 ALLOWED_TRAJECTORY_FOLDERS = ['2022-02-04', '2022-02-06', '2022-04-11', '2025-10-04', '2025-10-05']
+# Folders that should use Google Drive (even if local data exists)
+GOOGLE_DRIVE_ONLY_FOLDERS = ['2025-10-04', '2025-10-05']
+# Folders that can use local data
+LOCAL_DATA_FOLDERS = ['2022-02-04', '2022-02-06', '2022-04-11']
 
 def get_image_files():
+    """
+    Hybrid approach:
+    - 2022 folders: Use local data if available, otherwise Google Drive
+    - 2025 folders: Always use Google Drive (has correct filenames)
+    """
     image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
     image_files = []
-    
-    if USE_GOOGLE_DRIVE and DATA_DIR is None:
-        # Fetch from Google Drive
-        all_images = get_google_drive_images()
-        # Filter to only include allowed trajectory folders
-        filtered_images = []
-        for img in all_images:
-            path = img.get('path', '')
-            # Check if path contains any of the allowed trajectory folders
-            if any(folder in path for folder in ALLOWED_TRAJECTORY_FOLDERS):
-                filtered_images.append(img)
-        return filtered_images
-    elif DATA_DIR and DATA_DIR.exists():
-        # Use local directory - only include Trajectories subfolders
+
+    # Get 2022 images from local data if available
+    if DATA_DIR and DATA_DIR.exists():
         trajectories_dir = DATA_DIR / 'Trajectories'
         if trajectories_dir.exists():
-            for folder_name in ALLOWED_TRAJECTORY_FOLDERS:
+            for folder_name in LOCAL_DATA_FOLDERS:
                 folder_path = trajectories_dir / folder_name
                 if folder_path.exists():
                     for root, dirs, files in os.walk(folder_path):
                         for file in files:
                             if Path(file).suffix.lower() in image_extensions:
-                                # Create relative path from DATA_DIR
                                 full_path = os.path.join(root, file)
                                 rel_path = os.path.relpath(full_path, DATA_DIR)
-                                # Normalize path separators to forward slashes
                                 rel_path = rel_path.replace('\\', '/')
                                 image_files.append({
                                     'path': rel_path,
                                     'name': file,
-                                    'full_path': full_path
+                                    'full_path': full_path,
+                                    'source': 'local'
                                 })
-        return sorted(image_files, key=lambda x: x['name'])
-    else:
-        # No data source available
-        return []
+    elif GOOGLE_DRIVE_IMAGE_MAP:
+        # No local data - get 2022 from Google Drive
+        for path, info in GOOGLE_DRIVE_IMAGE_MAP.items():
+            if any(folder in path for folder in LOCAL_DATA_FOLDERS):
+                file_id = info.get('file_id')
+                if file_id:
+                    GOOGLE_DRIVE_FILE_ID_CACHE[path] = file_id
+                image_files.append({
+                    'path': path,
+                    'name': info.get('name', Path(path).name),
+                    'file_id': file_id,
+                    'full_path': path,
+                    'source': 'google_drive'
+                })
+
+    # Always get 2025 images from Google Drive (has correct filenames)
+    if GOOGLE_DRIVE_IMAGE_MAP:
+        for path, info in GOOGLE_DRIVE_IMAGE_MAP.items():
+            if any(folder in path for folder in GOOGLE_DRIVE_ONLY_FOLDERS):
+                file_id = info.get('file_id')
+                if file_id:
+                    GOOGLE_DRIVE_FILE_ID_CACHE[path] = file_id
+                image_files.append({
+                    'path': path,
+                    'name': info.get('name', Path(path).name),
+                    'file_id': file_id,
+                    'full_path': path,
+                    'source': 'google_drive'
+                })
+
+    return sorted(image_files, key=lambda x: x['name'])
 
 def get_google_drive_images():
     """Fetch image list from Google Drive using cached mapping file"""
@@ -354,13 +378,21 @@ def index():
 def debug_info():
     """Debug endpoint to check deployment status"""
     sample_2025_images = [k for k in GOOGLE_DRIVE_IMAGE_MAP.keys() if '2025-10-04' in k][:5]
+    # Count images by source
+    all_images = get_image_files()
+    local_count = sum(1 for img in all_images if img.get('source') == 'local')
+    gdrive_count = sum(1 for img in all_images if img.get('source') == 'google_drive')
     return jsonify({
         'version': APP_VERSION,
-        'use_google_drive': USE_GOOGLE_DRIVE,
+        'mode': 'hybrid',
+        'local_folders': LOCAL_DATA_FOLDERS,
+        'google_drive_folders': GOOGLE_DRIVE_ONLY_FOLDERS,
         'data_dir': str(DATA_DIR) if DATA_DIR else None,
-        'total_images_in_map': len(GOOGLE_DRIVE_IMAGE_MAP),
-        'sample_2025_images': sample_2025_images,
-        'allowed_folders': ALLOWED_TRAJECTORY_FOLDERS
+        'total_images': len(all_images),
+        'local_images': local_count,
+        'google_drive_images': gdrive_count,
+        'total_in_gdrive_map': len(GOOGLE_DRIVE_IMAGE_MAP),
+        'sample_2025_images': sample_2025_images
     })
 
 @app.route('/api/images')
@@ -371,7 +403,7 @@ def get_images():
 
 @app.route('/api/images/<path:image_path>')
 def serve_image(image_path):
-    """Serve image files from local storage or Google Drive"""
+    """Serve image files from local storage or Google Drive (hybrid mode)"""
     # Flask automatically URL-decodes the path, but we need to handle it properly
     # Normalize path separators
     image_path = image_path.replace('\\', '/')
@@ -379,33 +411,42 @@ def serve_image(image_path):
         # Decode URL encoding if needed
         import urllib.parse
         image_path = urllib.parse.unquote(image_path)
-        
-        if USE_GOOGLE_DRIVE and DATA_DIR is None:
-            # Serve from Google Drive
+
+        # Check if this is a 2025 folder - always use Google Drive for these
+        is_2025_folder = any(folder in image_path for folder in GOOGLE_DRIVE_ONLY_FOLDERS)
+
+        if is_2025_folder and GOOGLE_DRIVE_IMAGE_MAP:
+            # Always serve 2025 images from Google Drive
             return serve_google_drive_image(image_path)
         elif DATA_DIR and DATA_DIR.exists():
-            # Serve from local directory
+            # Try to serve from local directory first (for 2022 folders)
             full_path = os.path.join(DATA_DIR, image_path)
-            if not os.path.exists(full_path):
+            if os.path.exists(full_path):
+                # Determine MIME type
+                mime_type, _ = mimetypes.guess_type(full_path)
+                if not mime_type:
+                    # Default MIME types for common image formats
+                    ext = Path(full_path).suffix.lower()
+                    mime_map = {'.bmp': 'image/bmp', '.png': 'image/png', '.jpg': 'image/jpeg',
+                               '.jpeg': 'image/jpeg', '.gif': 'image/gif'}
+                    mime_type = mime_map.get(ext, 'application/octet-stream')
+
+                with open(full_path, 'rb') as f:
+                    image_data = f.read()
+
+                response = Response(image_data, mimetype=mime_type)
+                # Add aggressive cache control headers for better performance
+                response.headers['Cache-Control'] = 'public, max-age=86400, immutable'  # Cache for 1 day
+                response.headers['Expires'] = (datetime.now() + timedelta(days=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+                return response
+            elif GOOGLE_DRIVE_IMAGE_MAP:
+                # Fallback to Google Drive if local file not found
+                return serve_google_drive_image(image_path)
+            else:
                 return f"Image not found: {image_path}", 404
-            
-            # Determine MIME type
-            mime_type, _ = mimetypes.guess_type(full_path)
-            if not mime_type:
-                # Default MIME types for common image formats
-                ext = Path(full_path).suffix.lower()
-                mime_map = {'.bmp': 'image/bmp', '.png': 'image/png', '.jpg': 'image/jpeg', 
-                           '.jpeg': 'image/jpeg', '.gif': 'image/gif'}
-                mime_type = mime_map.get(ext, 'application/octet-stream')
-            
-            with open(full_path, 'rb') as f:
-                image_data = f.read()
-            
-            response = Response(image_data, mimetype=mime_type)
-            # Add aggressive cache control headers for better performance
-            response.headers['Cache-Control'] = 'public, max-age=86400, immutable'  # Cache for 1 day
-            response.headers['Expires'] = (datetime.now() + timedelta(days=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
-            return response
+        elif GOOGLE_DRIVE_IMAGE_MAP:
+            # No local data - serve everything from Google Drive
+            return serve_google_drive_image(image_path)
         else:
             return "No image source configured", 404
     except Exception as e:
