@@ -39,6 +39,7 @@ token.json
 
 # Large data files - exclude image files and large datasets
 data/Trajectories/**/*.bmp
+data/**/*.bmp
 data/**/*.png
 data/**/*.jpg
 data/**/*.jpeg
@@ -51,3 +52,7 @@ data/**/*.jpeg
 artifacts/**/*.npz
 artifacts/**/*.pkl
 artifacts/**/*.h5
+*.pth
+
+# Claude Code session state
+.claude/
