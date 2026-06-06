@@ -126,7 +126,7 @@ def compute_win_rate(test_score, ref_scores, dim_idx):
     return np.mean(probs)
 
 
-def classify_winrate(model, image_path, device, all_ideal_scores, bad_scores=None, bad_threshold=0.6):
+def classify_winrate(model, image_path, device, all_ideal_scores, bad_scores=None, bad_threshold=0.7):
     """
     Classify a single image using WIN-RATE method (principled approach).
 
@@ -174,10 +174,12 @@ def classify_winrate(model, image_path, device, all_ideal_scores, bad_scores=Non
         is_bad = bad_confidence > bad_threshold
 
     if is_bad:
+        softmax_probs = F.softmax(torch.tensor(test_scores, dtype=torch.float32), dim=0).numpy()
         return {
             'predicted_class': 'Bad',
             'predicted_idx': -1,
             'raw_scores': {RECONSTRUCTION_TYPES[i]: float(test_scores[i]) for i in range(NUM_TYPES)},
+            'probabilities': {RECONSTRUCTION_TYPES[i]: float(softmax_probs[i]) for i in range(NUM_TYPES)},
             'classification_scores': {'Bad': bad_confidence},
             'quality': None,
             'method': 'win-rate with bad detection',
@@ -220,10 +222,13 @@ def classify_winrate(model, image_path, device, all_ideal_scores, bad_scores=Non
             TYPE_TO_IDX[pred_class]
         )
 
+    softmax_probs = F.softmax(torch.tensor(test_scores, dtype=torch.float32), dim=0).numpy()
+
     return {
         'predicted_class': pred_class,
         'predicted_idx': pred_idx,
         'raw_scores': {RECONSTRUCTION_TYPES[i]: float(test_scores[i]) for i in range(NUM_TYPES)},
+        'probabilities': {RECONSTRUCTION_TYPES[i]: float(softmax_probs[i]) for i in range(NUM_TYPES)},
         'classification_scores': classification_scores,
         'quality': quality,
         'details': details,
@@ -576,6 +581,11 @@ def classify_single_image(model, image_path, device, all_ideal_scores=None, bad_
     print(f"\nRaw Scores:")
     for rt, score in result['raw_scores'].items():
         print(f"  {rt}: {score:.3f}")
+
+    print(f"\nProbabilities (softmax over raw scores):")
+    for rt, prob in result.get('probabilities', {}).items():
+        indicator = " <-- PREDICTED" if rt == result['predicted_class'] else ""
+        print(f"  {rt}: {prob:.1%}{indicator}")
 
     print(f"\nCross-type Win-Rates:")
     for rt, wr in result.get('classification_scores', {}).items():

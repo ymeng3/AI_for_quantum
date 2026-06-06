@@ -92,7 +92,7 @@ CONFIDENCE_MAP = {
 
 
 def get_transform(training=True):
-    """Get image transforms."""
+    """Get image transforms for training/eval."""
     if training:
         return T.Compose([
             T.Resize((224, 224)),
@@ -325,7 +325,7 @@ def compute_loss(model, batch, device):
     img2 = batch['image2'].to(device)
     type_idx = batch['reconstruction_type'].to(device)
     winner = batch['winner'].to(device)
-    weight = batch['weight'].to(device).float()
+    weight = batch['weight'].float().to(device)
 
     # Get rewards
     r1 = model(img1)  # [B, NUM_TYPES]
