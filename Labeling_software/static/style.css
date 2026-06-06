@@ -563,6 +563,57 @@ body {
     display: block;
 }
 
+/* Notification styles */
+#notificationContainer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    pointer-events: none;
+}
+
+.notification {
+    background: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-bottom: 10px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    max-width: 300px;
+    font-size: 14px;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Inline notification next to checkbox */
+.inline-notification {
+    display: inline-block !important;
+    margin-left: 8px;
+    padding: 4px 8px;
+    background: #4CAF50 !important;
+    color: white !important;
+    border-radius: 4px;
+    font-size: 11px;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    position: relative;
+    z-index: 10;
+}
+
+.inline-notification.show {
+    opacity: 1 !important;
+    transform: translateX(0);
+}
+
 .image-item .status-badge {
     position: absolute;
     top: 5px;
@@ -573,6 +624,17 @@ body {
     border-radius: 3px;
     font-size: 10px;
     font-weight: 600;
+}
+
+.image-item .status-badge.bad {
+    background-color: #f44336 !important;
+    color: white !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    min-width: 40px;
+    text-align: center;
 }
 
 .image-item .status-badge.labeled {
