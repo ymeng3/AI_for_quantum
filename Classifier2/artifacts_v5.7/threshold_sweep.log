@@ -1,0 +1,39 @@
+Device: mps
+Model: /Users/ymeng/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Project Quantum/Classifier2/artifacts_v5.7/best_model.pth
+/Users/ymeng/Library/Python/3.9/lib/python/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/ymeng/Library/Python/3.9/lib/python/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=None`.
+  warnings.warn(msg)
+Scored 147 ideal images: (1 x 1)=41, Twinned(2 x 1)=4, c(6 x 2)=42, (√13 x √13)=31, HTR=29
+Scored 31 bad reference images
+Scored 12 Test/Val images
+
+==========================================================================================
+  Thr |     Test/Val acc |  Bad recall (LOO) |   Ideal-split acc | Notes
+------------------------------------------------------------------------------------------
+ 0.45 | 4/12 = 33.3%    | 15/31 = 48.4%     | 98/147 = 66.7%     | 5 Test/Val false-Bad
+ 0.50 | 4/12 = 33.3%    | 12/31 = 38.7%     | 98/147 = 66.7%     | 5 Test/Val false-Bad
+ 0.55 | 4/12 = 33.3%    | 12/31 = 38.7%     | 98/147 = 66.7%     | 5 Test/Val false-Bad
+ 0.60 | 4/12 = 33.3%    | 10/31 = 32.3%     | 121/147 = 82.3%     | 5 Test/Val false-Bad
+ 0.65 | 4/12 = 33.3%    | 10/31 = 32.3%     | 121/147 = 82.3%     | 5 Test/Val false-Bad
+ 0.70 | 7/12 = 58.3%    | 10/31 = 32.3%     | 130/147 = 88.4%     | 
+ 0.75 | 7/12 = 58.3%    | 9/31 = 29.0%     | 131/147 = 89.1%     | 
+ 0.80 | 7/12 = 58.3%    | 2/31 =  6.5%     | 131/147 = 89.1%     | 
+ 0.85 | 7/12 = 58.3%    | 0/31 =  0.0%     | 131/147 = 89.1%     | 
+
+==========================================================================================
+Per-image detail across thresholds (Test/Val only):
+Image                  GT              |  0.45 |  0.50 |  0.55 |  0.60 |  0.65 |  0.70 |  0.75 |  0.80 |  0.85
+----------------------------------------------------------------------------------------------------------------
+Test/HTR_15.png        HTR             |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓  
+Test/HTR_16.png        HTR             |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓  
+Test/HTR_23.png        HTR             |   B   |   B   |   B   |   B   |   B   |   ✓   |   ✓   |   ✓   |   ✓  
+Test/HTR_24.png        HTR             |   B   |   B   |   B   |   B   |   B   |   ✓   |   ✓   |   ✓   |   ✓  
+Test/RT13_11.png       (√13 x √13)     |   B   |   B   |   B   |   B   |   B   |   ✗   |   ✗   |   ✗   |   ✗  
+Test/RT13_12.png       (√13 x √13)     |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓  
+Test/RT13_13.png       (√13 x √13)     |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |   ✓  
+Val/HTR_23.png         HTR             |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗  
+Val/HTR_24.png         HTR             |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗  
+Val/HTR_25.png         HTR             |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗   |   ✗  
+Val/HTR_5.png          HTR             |   B   |   B   |   B   |   B   |   B   |   ✓   |   ✓   |   ✓   |   ✓  
+Val/RT13_12.png        (√13 x √13)     |   B   |   B   |   B   |   B   |   B   |   ✗   |   ✗   |   ✗   |   ✗  

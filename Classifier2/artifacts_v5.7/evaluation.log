@@ -1,0 +1,147 @@
+Loading model: /Users/ymeng/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Project Quantum/Classifier2/artifacts_v5.7/best_model.pth
+Device: mps
+/Users/ymeng/Library/Python/3.9/lib/python/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/ymeng/Library/Python/3.9/lib/python/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=None`.
+  warnings.warn(msg)
+
+############################################################
+# 1. IDEAL-SPLIT EVALUATION (4-class, Twinned excluded)
+############################################################
+
+============================================================
+IDEAL SPLIT EVALUATION (Reference vs Test)
+============================================================
+
+Split (test_fraction=0.2):
+  HTR: 24 ref, 5 test
+  (√13 x √13): 25 ref, 6 test
+  (1 x 1): 33 ref, 8 test
+  c(6 x 2): 34 ref, 8 test
+
+============================================================
+Test Results by Class
+============================================================
+
+Class                Accuracy        Correct/Total
+--------------------------------------------------
+(1 x 1)                75.0%         6/8
+(√13 x √13)           100.0%         6/6
+HTR                   100.0%         5/5
+c(6 x 2)              100.0%         8/8
+--------------------------------------------------
+OVERALL                92.6%         25/27
+
+============================================================
+Detailed Results
+============================================================
+
+Image                          GT              Predicted       Correct
+----------------------------------------------------------------------
+1x1_21.bmp                     (1 x 1)         (1 x 1)         ✓
+1x1_22.bmp                     (1 x 1)         (1 x 1)         ✓
+ideal_1x1_36.bmp               (1 x 1)         (1 x 1)         ✓
+1x1_13.bmp                     (1 x 1)         (1 x 1)         ✓
+1x1_1.bmp                      (1 x 1)         (1 x 1)         ✓
+1x1_25.bmp                     (1 x 1)         HTR             ✗
+1x1_27.bmp                     (1 x 1)         HTR             ✗
+ideal_1x1_38.bmp               (1 x 1)         (1 x 1)         ✓
+RT13_27.bmp                    (√13 x √13)     (√13 x √13)     ✓
+RT13_36.bmp                    (√13 x √13)     (√13 x √13)     ✓
+RT13_28.bmp                    (√13 x √13)     (√13 x √13)     ✓
+RT13_24.bmp                    (√13 x √13)     (√13 x √13)     ✓
+RT13_29.bmp                    (√13 x √13)     (√13 x √13)     ✓
+RT13_33.bmp                    (√13 x √13)     (√13 x √13)     ✓
+HTR_29.bmp                     HTR             HTR             ✓
+HTR_25.bmp                     HTR             HTR             ✓
+HTR_21.bmp                     HTR             HTR             ✓
+HTR_32.bmp                     HTR             HTR             ✓
+HTR_31.bmp                     HTR             HTR             ✓
+c6x2_5.bmp                     c(6 x 2)        c(6 x 2)        ✓
+ideal_c6x2_32.bmp              c(6 x 2)        c(6 x 2)        ✓
+ideal_c6x2_33.bmp              c(6 x 2)        c(6 x 2)        ✓
+c6x2_12.bmp                    c(6 x 2)        c(6 x 2)        ✓
+c6x2_22.bmp                    c(6 x 2)        c(6 x 2)        ✓
+c6x2_8.bmp                     c(6 x 2)        c(6 x 2)        ✓
+c6x2_10.bmp                    c(6 x 2)        c(6 x 2)        ✓
+ideal_c6x2_36.bmp              c(6 x 2)        c(6 x 2)        ✓
+
+############################################################
+# 2. PAIRWISE HOLDOUT EVALUATION (v5.7 split)
+############################################################
+
+============================================================
+PAIRWISE COMPARISON EVALUATION
+============================================================
+Loaded 996 pairwise comparisons
+Test set: 49 pairs, 189 comparisons
+
+--- Accuracy by Reconstruction Type ---
+  (1 x 1): 81.6% (31/38)
+  Twinned(2 x 1): 93.8% (30/32)
+  c(6 x 2): 78.8% (26/33)
+  (√13 x √13): 95.5% (42/44)
+  HTR: 97.4% (38/39)
+
+  Overall: 89.8% (167/186)
+
+--- Accuracy by Winner Type ---
+  image1 wins: 89.7% (35/39)
+  image2 wins: 85.7% (36/42)
+  tie: 62.5% (10/16)
+  not_apply: 96.6% (86/89)
+
+############################################################
+# 3. SINGLE-IMAGE EVAL on Test/ and Val/ folders
+############################################################
+
+============================================================
+SINGLE-IMAGE CLASSIFICATION EVALUATION (v2.0)
+============================================================
+
+Loaded ideal references:
+  (1 x 1): 41 images
+  Twinned(2 x 1): 4 images
+  c(6 x 2): 42 images
+  (√13 x √13): 31 images
+  HTR: 29 images
+  Bad references: 31 images
+
+============================================================
+Test Results
+============================================================
+
+Image                GT              Win-Rate        Quality  Argmax         
+---------------------------------------------------------------------------
+HTR_15.png           HTR             ✓ HTR          0.29     ✓ HTR         
+HTR_16.png           HTR             ✓ HTR          0.08     ✗ c(6 x 2)    
+HTR_23.png           HTR             ✗ Bad          N/A      ✓ HTR         
+HTR_24.png           HTR             ✗ Bad          N/A      ✓ HTR         
+RT13_11.png          (√13 x √13)     ✗ Bad          N/A      ✗ HTR         
+RT13_12.png          (√13 x √13)     ✓ (√13 x √13)  0.62     ✓ (√13 x √13) 
+RT13_13.png          (√13 x √13)     ✓ (√13 x √13)  0.52     ✓ (√13 x √13) 
+
+  Win-Rate Accuracy: 57.1% (4/7)
+  Argmax Accuracy (not principled): 71.4% (5/7)
+
+============================================================
+Val Results
+============================================================
+
+Image                GT              Win-Rate        Quality  Argmax         
+---------------------------------------------------------------------------
+HTR_23.png           HTR             ✗ (√13 x √13)  0.31     ✗ (√13 x √13) 
+HTR_24.png           HTR             ✗ (√13 x √13)  0.36     ✗ (√13 x √13) 
+HTR_25.png           HTR             ✗ c(6 x 2)     0.38     ✗ (√13 x √13) 
+HTR_5.png            HTR             ✗ Bad          N/A      ✓ HTR         
+RT13_12.png          (√13 x √13)     ✗ Bad          N/A      ✗ HTR         
+
+  Win-Rate Accuracy: 0.0% (0/5)
+  Argmax Accuracy (not principled): 20.0% (1/5)
+
+============================================================
+OVERALL SUMMARY
+============================================================
+
+Win-Rate (principled):    33.3% (4/12)
+Argmax (not principled):  50.0% (6/12)
