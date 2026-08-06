@@ -1,0 +1,148 @@
+========================================================================
+NMF SAME-SETUP ANALYSIS REPORT
+========================================================================
+
+Image: 128x96 grayscale, percentile normalized
+Components: 3
+
+========================================================================
+  HTR (2025 setup)
+========================================================================
+
+  Reconstruction error: 0.0738 (7.4%)
+
+  1. BASIS COMPONENTS
+  ----------------------------------------
+  C1: top=36%, bottom=64%, center=53%, max=1.2246
+  C2: top=46%, bottom=54%, center=50%, max=2.0370
+  C3: top=73%, bottom=27%, center=50%, max=3.0435
+
+  2. PER-TRAJECTORY COMPOSITION
+  ----------------------------------------
+  HL251004A (2456 frames):
+    C1: mean=0.531, std=0.056, range=[0.000, 0.642]
+    C2: mean=0.272, std=0.113, range=[0.000, 0.478]
+    C3: mean=0.197, std=0.070, range=[0.087, 1.000]
+    Overall dominant: C1 (53.1%)
+
+  HL251004B (922 frames):
+    C1: mean=0.881, std=0.053, range=[0.650, 0.960]
+    C2: mean=0.102, std=0.069, range=[0.000, 0.350]
+    C3: mean=0.017, std=0.029, range=[0.000, 0.143]
+    Overall dominant: C1 (88.1%)
+
+  3. CONSISTENCY
+  ----------------------------------------
+  Average composition cosine similarity: 0.895
+  C1 evolution correlation (resampled): 0.071
+  C2 evolution correlation (resampled): 0.047
+  C3 evolution correlation (resampled): -0.117
+
+  4. PHASE TRANSITIONS
+  ----------------------------------------
+  HL251004A:
+    Total segments: 39
+    Sustained (>=10 frames): 14
+      Frames    0- 254 ( 254 frames): C1 @ 165-847C
+      Frames  255- 276 (  21 frames): C1 @ 847-699C
+      Frames  297- 307 (  10 frames): C2 @ 516-513C
+      Frames  308- 318 (  10 frames): C2 @ 473-314C
+      Frames  319- 329 (  10 frames): C2 @ 312-296C
+      Frames  330- 340 (  10 frames): C2 @ 295-205C
+      Frames  350-1538 (1188 frames): C1 @ 392-165C
+      Frames 1538-1559 (  21 frames): C2 @ 175-297C
+      Frames 1574-1634 (  60 frames): C1 @ 342-413C
+      Frames 1639-1662 (  23 frames): C1 @ 429-473C
+      Frames 1663-1715 (  52 frames): C1 @ 473-508C
+      Frames 1715-1734 (  19 frames): C2 @ 513-524C
+      Frames 1742-2252 ( 510 frames): C1 @ 530-782C
+      Frames 2253-2456 ( 203 frames): C1 @ 846-999C
+    Major transitions:
+      C1 -> C1 at frame 255 (847C)
+      C1 -> C2 at frame 297 (516C)
+      C2 -> C2 at frame 308 (473C)
+      C2 -> C2 at frame 319 (312C)
+      C2 -> C2 at frame 330 (295C)
+      C2 -> C1 at frame 350 (392C)
+      C1 -> C2 at frame 1538 (175C)
+      C2 -> C1 at frame 1574 (342C)
+      C1 -> C1 at frame 1639 (429C)
+      C1 -> C1 at frame 1663 (473C)
+      C1 -> C2 at frame 1715 (513C)
+      C2 -> C1 at frame 1742 (530C)
+      C1 -> C1 at frame 2253 (846C)
+
+  HL251004B:
+    Total segments: 1
+    Sustained (>=10 frames): 1
+      Frames    0- 922 ( 922 frames): C1 @ 170-978C
+    Major transitions:
+
+  5. TRANSITION COMPARISON
+  ----------------------------------------
+  HL251004A phase sequence: C1 -> C1 -> C2 -> C2 -> C2 -> C2 -> C1 -> C2 -> C1 -> C1 -> C1 -> C2 -> C1 -> C1
+  HL251004B phase sequence: C1
+
+========================================================================
+  RT13 (2022 setup)
+========================================================================
+
+  Reconstruction error: 0.0602 (6.0%)
+
+  1. BASIS COMPONENTS
+  ----------------------------------------
+  C1: top=35%, bottom=65%, center=49%, max=0.8382
+  C2: top=30%, bottom=70%, center=47%, max=1.1088
+  C3: top=35%, bottom=65%, center=56%, max=1.3536
+
+  2. PER-TRAJECTORY COMPOSITION
+  ----------------------------------------
+  RR220204A (388 frames):
+    C1: mean=0.521, std=0.090, range=[0.294, 0.836]
+    C2: mean=0.234, std=0.152, range=[0.073, 0.526]
+    C3: mean=0.245, std=0.124, range=[0.000, 0.388]
+    Overall dominant: C1 (52.1%)
+
+  RR220411A (449 frames):
+    C1: mean=0.752, std=0.209, range=[0.382, 0.974]
+    C2: mean=0.061, std=0.042, range=[0.000, 0.121]
+    C3: mean=0.187, std=0.177, range=[0.000, 0.537]
+    Overall dominant: C1 (75.2%)
+
+  3. CONSISTENCY
+  ----------------------------------------
+  Average composition cosine similarity: 0.936
+  C1 evolution correlation (resampled): 0.805
+  C2 evolution correlation (resampled): -0.010
+  C3 evolution correlation (resampled): -0.157
+
+  4. PHASE TRANSITIONS
+  ----------------------------------------
+  RR220204A:
+    Total segments: 26
+    Sustained (>=10 frames): 4
+      Frames   12-  23 (  11 frames): C2 @ 949-988C
+      Frames   23- 297 ( 274 frames): C1 @ 927-880C
+      Frames  327- 362 (  35 frames): C2 @ 946-948C
+      Frames  373- 384 (  11 frames): C1 @ 939-935C
+    Major transitions:
+      C2 -> C1 at frame 23 (927C)
+      C1 -> C2 at frame 327 (946C)
+      C2 -> C1 at frame 373 (939C)
+
+  RR220411A:
+    Total segments: 4
+    Sustained (>=10 frames): 2
+      Frames    0- 389 ( 389 frames): C1 @ 180-571C
+      Frames  393- 449 (  56 frames): C3 @ 546-278C
+    Major transitions:
+      C1 -> C3 at frame 393 (546C)
+
+  5. TRANSITION COMPARISON
+  ----------------------------------------
+  RR220204A phase sequence: C2 -> C1 -> C2 -> C1
+  RR220411A phase sequence: C1 -> C3
+
+========================================================================
+END OF REPORT
+========================================================================

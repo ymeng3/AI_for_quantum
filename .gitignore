@@ -47,6 +47,8 @@ data/**/*.jpeg
 # Large presentation files
 *.pptx
 *.pdf
+# But include the NMF reference PDFs
+!nmf/pdf/*.pdf
 
 # Large artifacts
 artifacts/**/*.npz

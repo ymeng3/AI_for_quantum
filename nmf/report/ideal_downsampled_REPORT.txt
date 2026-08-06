@@ -1,0 +1,140 @@
+========================================================================
+NMF IDEAL-BASIS ANALYSIS REPORT (Downsampled)
+========================================================================
+
+1. DATA SUMMARY
+----------------------------------------
+  Image size:       64x48 grayscale
+  Feature vector:   3072 dimensions
+  NMF components:   4
+  Total ideal imgs: 150
+    STO_ideal_1x1: 41
+    STO_ideal_RT13: 38
+    STO_ideal_HTR: 29
+    STO_ideal_c6x2: 42
+
+2. NMF TRAINING ON IDEAL IMAGES
+----------------------------------------
+  Reconstruction error: 17.3028
+  Iterations:           933
+  Relative Frobenius error: 0.0763 (7.6%)
+
+3. COMPONENT-CLASS MAPPING
+----------------------------------------
+
+  (a) Each CLASS's dominant component:
+      1x1    -> C2  (normalized weight = 0.719)
+      RT13   -> C1  (normalized weight = 0.539)
+      HTR    -> C1  (normalized weight = 0.590)
+      c6x2   -> C2  (normalized weight = 0.875)
+
+  (b) Each COMPONENT's dominant class:
+      C1     -> HTR    (column fraction = 0.621)
+      C2     -> 1x1    (column fraction = 0.446)
+      C3     -> HTR    (column fraction = 0.529)
+      C4     -> HTR    (column fraction = 0.554)
+
+  Unique component assignments: 2 / 4
+  NOTE: Only 2 distinct components for 4 classes
+    Component C2 shared by: 1x1, c6x2
+    Component C4 shared by: RT13, HTR
+
+4. IDEAL IMAGE CLASSIFICATION ACCURACY
+----------------------------------------
+  Accuracy (dominant-component matching): 75.3%
+
+  Normalized weight matrix (rows=classes, cols=components):
+           C1      C2      C3      C4  
+  1x1     0.048  0.719  0.015  0.219
+  RT13    0.539  0.090  0.190  0.181
+  HTR     0.590  0.025  0.142  0.243
+  c6x2    0.009  0.875  0.005  0.111
+
+5. COSINE SIMILARITY BETWEEN CLASS CENTROIDS
+----------------------------------------
+            1x1    RT13     HTR    c6x2
+  1x1     1.000  0.290  0.206  0.984
+  RT13    0.290  1.000  0.987  0.195
+  HTR     0.206  0.987  1.000  0.095
+  c6x2    0.984  0.195  0.095  1.000
+
+  Most distinct pair:  HTR vs c6x2 (sim = 0.095)
+  Most similar pair:   RT13 vs HTR (sim = 0.987)
+
+6. CLUSTERING QUALITY
+----------------------------------------
+  Silhouette score (NMF space): -0.016
+    (1.0 = perfect, 0 = overlapping, <0 = misassigned)
+    Poor separation — classes significantly overlap in NMF space
+
+7. TRAJECTORY PROJECTION RESULTS
+----------------------------------------
+
+  --- HTR Trajectories ---
+  HL251004A (2456 frames):
+    C1 (HTR  ): mean=0.022, min=0.000, max=0.924
+    C2 (1x1  ): mean=0.948, min=0.076, max=1.000
+    C3 (HTR  ): mean=0.006, min=0.000, max=0.066
+    C4 (HTR  ): mean=0.024, min=0.000, max=0.174
+    -> Dominant: C2 (1x1) at 94.8%
+
+  HL251004B (922 frames):
+    C1 (HTR  ): mean=0.037, min=0.000, max=0.153
+    C2 (1x1  ): mean=0.772, min=0.576, max=1.000
+    C3 (HTR  ): mean=0.054, min=0.000, max=0.157
+    C4 (HTR  ): mean=0.137, min=0.000, max=0.424
+    -> Dominant: C2 (1x1) at 77.2%
+
+  RR220206A (287 frames):
+    C1 (HTR  ): mean=0.046, min=0.000, max=0.138
+    C2 (1x1  ): mean=0.045, min=0.000, max=0.112
+    C3 (HTR  ): mean=0.006, min=0.000, max=0.020
+    C4 (HTR  ): mean=0.903, min=0.736, max=1.000
+    -> Dominant: C4 (HTR) at 90.3%
+
+  --- RT13 Trajectories ---
+  HL251005A (1394 frames):
+    C1 (HTR  ): mean=0.037, min=0.000, max=0.123
+    C2 (1x1  ): mean=0.708, min=0.517, max=0.863
+    C3 (HTR  ): mean=0.097, min=0.000, max=0.149
+    C4 (HTR  ): mean=0.158, min=0.000, max=0.413
+    -> Dominant: C2 (1x1) at 70.8%
+
+  RR220204A (388 frames):
+    C1 (HTR  ): mean=0.088, min=0.059, max=0.147
+    C2 (1x1  ): mean=0.217, min=0.070, max=0.257
+    C3 (HTR  ): mean=0.053, min=0.005, max=0.126
+    C4 (HTR  ): mean=0.642, min=0.539, max=0.866
+    -> Dominant: C4 (HTR) at 64.2%
+
+  RR220411A (449 frames):
+    C1 (HTR  ): mean=0.082, min=0.014, max=0.122
+    C2 (1x1  ): mean=0.251, min=0.164, max=0.356
+    C3 (HTR  ): mean=0.037, min=0.010, max=0.046
+    C4 (HTR  ): mean=0.631, min=0.539, max=0.779
+    -> Dominant: C4 (HTR) at 63.1%
+
+8. HTR vs RT13 COMPARISON
+----------------------------------------
+
+  Component    HTR_avg    RT13_avg   Diff(H-R)
+  C1 (HTR  )    0.035      0.069     -0.034
+  C2 (1x1  )    0.588      0.392     +0.197
+  C3 (HTR  )    0.022      0.062     -0.040
+  C4 (HTR  )    0.354      0.477     -0.122
+
+9. CONSISTENCY ASSESSMENT
+----------------------------------------
+
+  HTR within-group cosine similarity: 0.429
+    Low consistency across HTR trajectories
+
+  RT13 within-group cosine similarity: 0.696
+    Low consistency across RT13 trajectories
+
+  HTR vs RT13 between-group cosine similarity: 0.939
+    HTR and RT13 trajectories are NOT well separated
+
+========================================================================
+END OF REPORT
+========================================================================

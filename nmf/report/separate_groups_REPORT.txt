@@ -1,0 +1,152 @@
+========================================================================
+NMF SEPARATE GROUPS vs PER-TRAJECTORY COMPARISON REPORT
+========================================================================
+
+Image size: 128x96 grayscale (12288 features)
+Components: 3
+
+========================================================================
+APPROACH A: SEPARATE-GROUP NMF
+========================================================================
+
+--- HTR Group ---
+  Relative reconstruction error: 0.1585 (15.9%)
+
+  HL251004A (2456 frames):
+    C1: mean=0.351, std=0.195, range=[0.040, 0.820]
+    C2: mean=0.235, std=0.113, range=[0.000, 0.402]
+    C3: mean=0.415, std=0.125, range=[0.140, 0.895]
+
+  HL251004B (922 frames):
+    C1: mean=0.170, std=0.164, range=[0.000, 0.579]
+    C2: mean=0.419, std=0.057, range=[0.296, 0.503]
+    C3: mean=0.411, std=0.192, range=[0.089, 0.698]
+
+  RR220206A (287 frames):
+    C1: mean=0.072, std=0.079, range=[0.000, 0.212]
+    C2: mean=0.925, std=0.077, range=[0.788, 1.000]
+    C3: mean=0.003, std=0.006, range=[0.000, 0.025]
+
+  Similarity HL251004A vs HL251004B: 0.909
+  Similarity HL251004A vs RR220206A: 0.444
+  Similarity HL251004B vs RR220206A: 0.708
+  Mean within-group similarity: 0.687
+  -> Low consistency
+
+--- RT13 Group ---
+  Relative reconstruction error: 0.1293 (12.9%)
+
+  HL251005A (1394 frames):
+    C1: mean=0.123, std=0.062, range=[0.000, 0.230]
+    C2: mean=0.371, std=0.170, range=[0.138, 0.719]
+    C3: mean=0.506, std=0.139, range=[0.281, 0.655]
+
+  RR220204A (388 frames):
+    C1: mean=0.880, std=0.041, range=[0.800, 0.963]
+    C2: mean=0.114, std=0.045, range=[0.000, 0.200]
+    C3: mean=0.007, std=0.008, range=[0.000, 0.041]
+
+  RR220411A (449 frames):
+    C1: mean=0.946, std=0.048, range=[0.858, 0.997]
+    C2: mean=0.050, std=0.052, range=[0.000, 0.142]
+    C3: mean=0.004, std=0.005, range=[0.000, 0.018]
+
+  Similarity HL251005A vs RR220204A: 0.270
+  Similarity HL251005A vs RR220411A: 0.226
+  Similarity RR220204A vs RR220411A: 0.997
+  Mean within-group similarity: 0.498
+  -> Low consistency
+
+--- HTR vs RT13 Basis Cross-Similarity ---
+            RT13_C1  RT13_C2  RT13_C3
+  HTR_C1    0.934    0.926    0.463
+  HTR_C2    0.955    0.880    0.380
+  HTR_C3    0.672    0.631    0.518
+
+  Best component matches (HTR -> RT13):
+    HTR C1 <-> RT13 C1: similarity = 0.934
+    HTR C2 <-> RT13 C1: similarity = 0.955
+    HTR C3 <-> RT13 C1: similarity = 0.672
+
+  Average best-match similarity: 0.854
+  -> HTR and RT13 share some common patterns but also have differences
+
+========================================================================
+APPROACH B: PER-TRAJECTORY NMF
+========================================================================
+
+--- HTR Trajectories ---
+  HL251004A (2456 frames):
+    Rel. error: 0.0971 (9.7%)
+    C1: mean=0.315, std=0.235
+    C2: mean=0.397, std=0.229
+    C3: mean=0.288, std=0.230
+
+  HL251004B (922 frames):
+    Rel. error: 0.0982 (9.8%)
+    C1: mean=0.263, std=0.243
+    C2: mean=0.303, std=0.220
+    C3: mean=0.435, std=0.337
+
+  RR220206A (287 frames):
+    Rel. error: 0.0843 (8.4%)
+    C1: mean=0.493, std=0.282
+    C2: mean=0.224, std=0.150
+    C3: mean=0.283, std=0.254
+
+  Basis cross-similarity within HTR (components NOT aligned):
+    HL251004A vs HL251004B: avg best-match = 0.907
+    HL251004A vs RR220206A: avg best-match = 0.762
+    HL251004B vs RR220206A: avg best-match = 0.725
+
+--- RT13 Trajectories ---
+  HL251005A (1394 frames):
+    Rel. error: 0.0919 (9.2%)
+    C1: mean=0.440, std=0.233
+    C2: mean=0.350, std=0.235
+    C3: mean=0.210, std=0.183
+
+  RR220204A (388 frames):
+    Rel. error: 0.0721 (7.2%)
+    C1: mean=0.532, std=0.311
+    C2: mean=0.257, std=0.257
+    C3: mean=0.212, std=0.203
+
+  RR220411A (449 frames):
+    Rel. error: 0.0481 (4.8%)
+    C1: mean=0.691, std=0.174
+    C2: mean=0.166, std=0.180
+    C3: mean=0.143, std=0.162
+
+  Basis cross-similarity within RT13 (components NOT aligned):
+    HL251005A vs RR220204A: avg best-match = 0.755
+    HL251005A vs RR220411A: avg best-match = 0.753
+    RR220204A vs RR220411A: avg best-match = 0.963
+
+========================================================================
+SUMMARY: GROUP NMF vs PER-TRAJECTORY NMF
+========================================================================
+
+  Reconstruction Error Comparison:
+  --------------------------------------------------
+  HTR group NMF: 0.1585
+  RT13 group NMF: 0.1293
+  HL251004A individual: 0.0971
+  HL251004B individual: 0.0982
+  RR220206A individual: 0.0843
+  HL251005A individual: 0.0919
+  RR220204A individual: 0.0721
+  RR220411A individual: 0.0481
+
+  Key Observations:
+  --------------------------------------------------
+  - Group NMF provides ALIGNED components across same-type trajectories,
+    enabling direct comparison of evolution curves.
+  - Per-trajectory NMF has lower reconstruction error (fits each trajectory
+    independently) but components are NOT comparable across trajectories.
+  - Group NMF within-group consistency tells us whether trajectories of the
+    same type follow similar evolution patterns.
+
+========================================================================
+END OF REPORT
+========================================================================

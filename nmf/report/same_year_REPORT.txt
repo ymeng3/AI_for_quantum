@@ -1,0 +1,133 @@
+========================================================================
+NMF SAME-YEAR ANALYSIS REPORT
+========================================================================
+
+Image size: 128x96 grayscale
+Components: 3
+Preprocessing: autocontrast (cutoff=2%)
+
+========================================================================
+  HTR (2025)
+========================================================================
+
+  Reconstruction error: 0.0744 (7.4%)
+  NMF iterations: 1000
+
+  --- HL251004A ---
+  Frames: 2456
+  Temperature range: 165°C → 1019°C
+  Average composition:
+    C1: mean=0.525, std=0.064, range=[0.000, 0.649]
+    C2: mean=0.280, std=0.121, range=[0.000, 0.509]
+    C3: mean=0.195, std=0.070, range=[0.089, 1.000]
+
+  Major phases (20 detected):
+    Phase 1: C1 dominant, 165°C → 847°C, 254 frames
+      avg weights: C1=0.548, C2=0.275, C3=0.178
+    Phase 2: C1 dominant, 847°C → 776°C, 12 frames
+      avg weights: C1=0.469, C2=0.391, C3=0.139
+    Phase 3: C2 dominant, 699°C → 530°C, 10 frames
+      avg weights: C1=0.417, C2=0.450, C3=0.133
+    Phase 4: C2 dominant, 526°C → 517°C, 10 frames
+      avg weights: C1=0.395, C2=0.468, C3=0.137
+    Phase 5: C2 dominant, 516°C → 513°C, 10 frames
+      avg weights: C1=0.392, C2=0.469, C3=0.139
+    Phase 6: C2 dominant, 473°C → 314°C, 10 frames
+      avg weights: C1=0.385, C2=0.468, C3=0.147
+    Phase 7: C2 dominant, 312°C → 296°C, 10 frames
+      avg weights: C1=0.372, C2=0.480, C3=0.148
+    Phase 8: C2 dominant, 295°C → 205°C, 10 frames
+      avg weights: C1=0.359, C2=0.493, C3=0.148
+    Phase 9: C1 dominant, 392°C → 165°C, 1188 frames
+      avg weights: C1=0.532, C2=0.274, C3=0.195
+    Phase 10: C2 dominant, 175°C → 297°C, 21 frames
+      avg weights: C1=0.360, C2=0.499, C3=0.142
+    Phase 11: C1 dominant, 342°C → 413°C, 60 frames
+      avg weights: C1=0.636, C2=0.054, C3=0.310
+    Phase 12: C1 dominant, 429°C → 473°C, 23 frames
+      avg weights: C1=0.639, C2=0.048, C3=0.313
+    Phase 13: C1 dominant, 473°C → 508°C, 52 frames
+      avg weights: C1=0.628, C2=0.069, C3=0.303
+    Phase 14: C2 dominant, 513°C → 526°C, 20 frames
+      avg weights: C1=0.403, C2=0.469, C3=0.128
+    Phase 15: C1 dominant, 530°C → 574°C, 18 frames
+      avg weights: C1=0.603, C2=0.122, C3=0.275
+    Phase 16: C1 dominant, 577°C → 607°C, 427 frames
+      avg weights: C1=0.523, C2=0.252, C3=0.225
+    Phase 17: C1 dominant, 620°C → 622°C, 11 frames
+      avg weights: C1=0.518, C2=0.287, C3=0.195
+    Phase 18: C1 dominant, 633°C → 699°C, 29 frames
+      avg weights: C1=0.514, C2=0.306, C3=0.180
+    Phase 19: C1 dominant, 700°C → 782°C, 15 frames
+      avg weights: C1=0.458, C2=0.420, C3=0.122
+    Phase 20: C1 dominant, 846°C → 999°C, 203 frames
+      avg weights: C1=0.492, C2=0.401, C3=0.107
+
+  --- HL251004B ---
+  Frames: 922
+  Temperature range: 169°C → 1016°C
+  Average composition:
+    C1: mean=0.871, std=0.061, range=[0.605, 0.960]
+    C2: mean=0.112, std=0.078, range=[0.000, 0.395]
+    C3: mean=0.017, std=0.030, range=[0.000, 0.136]
+
+  Major phases (1 detected):
+    Phase 1: C1 dominant, 170°C → 978°C, 922 frames
+      avg weights: C1=0.871, C2=0.112, C3=0.017
+
+  Overall consistency (HL251004A vs HL251004B):
+    Cosine similarity of mean composition: 0.895
+
+  Phase sequence comparison:
+    HL251004A: C1(165-847°C) → C1(847-776°C) → C2(699-530°C) → C2(526-517°C) → C2(516-513°C) → C2(473-314°C) → C2(312-296°C) → C2(295-205°C) → C1(392-165°C) → C2(175-297°C) → C1(342-413°C) → C1(429-473°C) → C1(473-508°C) → C2(513-526°C) → C1(530-574°C) → C1(577-607°C) → C1(620-622°C) → C1(633-699°C) → C1(700-782°C) → C1(846-999°C)
+    HL251004B: C1(170-978°C)
+
+========================================================================
+  RT13 (2022)
+========================================================================
+
+  Reconstruction error: 0.0622 (6.2%)
+  NMF iterations: 1000
+
+  --- RR220204A ---
+  Frames: 388
+  Temperature range: 165°C → 988°C
+  Average composition:
+    C1: mean=0.540, std=0.083, range=[0.337, 0.859]
+    C2: mean=0.206, std=0.156, range=[0.057, 0.512]
+    C3: mean=0.254, std=0.129, range=[0.000, 0.397]
+
+  Major phases (4 detected):
+    Phase 1: C1 dominant, 933°C → 949°C, 14 frames
+      avg weights: C1=0.499, C2=0.482, C3=0.019
+    Phase 2: C1 dominant, 927°C → 881°C, 277 frames
+      avg weights: C1=0.582, C2=0.128, C3=0.291
+    Phase 3: C1 dominant, 923°C → 950°C, 40 frames
+      avg weights: C1=0.399, C2=0.356, C3=0.244
+    Phase 4: C1 dominant, 946°C → 935°C, 22 frames
+      avg weights: C1=0.507, C2=0.488, C3=0.004
+
+  --- RR220411A ---
+  Frames: 449
+  Temperature range: 180°C → 956°C
+  Average composition:
+    C1: mean=0.749, std=0.217, range=[0.377, 0.985]
+    C2: mean=0.046, std=0.035, range=[0.000, 0.104]
+    C3: mean=0.204, std=0.187, range=[0.000, 0.550]
+
+  Major phases (2 detected):
+    Phase 1: C1 dominant, 180°C → 643°C, 369 frames
+      avg weights: C1=0.821, C2=0.040, C3=0.140
+    Phase 2: C3 dominant, 595°C → 278°C, 68 frames
+      avg weights: C1=0.414, C2=0.076, C3=0.510
+
+  Overall consistency (RR220204A vs RR220411A):
+    Cosine similarity of mean composition: 0.949
+
+  Phase sequence comparison:
+    RR220204A: C1(933-949°C) → C1(927-881°C) → C1(923-950°C) → C1(946-935°C)
+    RR220411A: C1(180-643°C) → C3(595-278°C)
+
+========================================================================
+END OF REPORT
+========================================================================
